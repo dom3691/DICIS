@@ -1,0 +1,145 @@
+@page "/admin"
+@inject HttpClient Http
+@inject AuthService AuthService
+@inject NavigationManager Navigation
+@inject Blazored.LocalStorage.ILocalStorageService LocalStorage
+
+<PageTitle>Admin Dashboard - DICIS</PageTitle>
+
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-12">
+            <h2>Admin Dashboard</h2>
+            
+            @if (isLoading)
+            {
+                <div class="text-center">
+                    <div class="spinner-border" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                </div>
+            }
+            else if (analytics != null)
+            {
+                @if (analytics.Alerts.Any())
+                {
+                    <div class="alert alert-warning">
+                        <h5>SLA Alerts</h5>
+                        <ul class="mb-0">
+                            @foreach (var alert in analytics.Alerts)
+                            {
+                                <li>@alert</li>
+                            }
+                        </ul>
+                    </div>
+                }
+                
+                <div class="row mt-4">
+                    <div class="col-md-3">
+                        <div class="card text-center">
+                            <div class="card-body">
+                                <h5 class="card-title">Total Applications</h5>
+                                <h2>@analytics.TotalApplications</h2>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card text-center">
+                            <div class="card-body">
+                                <h5 class="card-title">Approved</h5>
+                                <h2 class="text-success">@analytics.ApprovedApplications</h2>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card text-center">
+                            <div class="card-body">
+                                <h5 class="card-title">Pending</h5>
+                                <h2 class="text-warning">@analytics.PendingApplications</h2>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card text-center">
+                            <div class="card-body">
+                                <h5 class="card-title">Approval Rate</h5>
+                                <h2>@analytics.ApprovalRate.ToString("F1")%</h2>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row mt-4">
+                    <div class="col-md-6">
+                        <div class="card">
+                            <div class="card-header">
+                                <h5>Key Metrics</h5>
+                            </div>
+                            <div class="card-body">
+                                <p><strong>Average Verification Time:</strong> @analytics.AverageVerificationTimeSeconds.ToString("F2") seconds</p>
+                                <p><strong>Average Certificate Generation Time:</strong> @analytics.AverageCertificateGenerationTimeSeconds.ToString("F2") seconds</p>
+                                <p><strong>Fraud Reports:</strong> @analytics.FraudReportsCount</p>
+                                <p><strong>Revoked Certificates:</strong> @analytics.RevokedCertificatesCount</p>
+                                <p><strong>Exception Reviews:</strong> @analytics.ExceptionReviewApplications</p>
+                                <p><strong>SLA Compliance Rate:</strong> @analytics.SLA.SLAComplianceRate.ToString("F1")%</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="card">
+                            <div class="card-header">
+                                <h5>Applications by State</h5>
+                            </div>
+                            <div class="card-body">
+                                @foreach (var state in analytics.ApplicationsByState)
+                                {
+                                    <p><strong>@state.Key:</strong> @state.Value</p>
+                                }
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+@code {
+    private Core.DTOs.AnalyticsResponse? analytics;
+    private bool isLoading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var isAuth = await AuthService.IsAuthenticatedAsync();
+        if (!isAuth)
+        {
+            Navigation.NavigateTo("/login");
+            return;
+        }
+
+        await LoadAnalytics();
+    }
+
+    private async Task LoadAnalytics()
+    {
+        try
+        {
+            var token = await LocalStorage.GetItemAsync<string>("authToken");
+            if (!string.IsNullOrEmpty(token))
+            {
+                Http.DefaultRequestHeaders.Authorization = 
+                    new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+            }
+            
+            analytics = await Http.GetFromJsonAsync<Core.DTOs.AnalyticsResponse>("api/admin/analytics");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error loading analytics: {ex.Message}");
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+}

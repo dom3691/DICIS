@@ -1,0 +1,91 @@
+@page "/verify"
+@inject ApplicationService ApplicationService
+
+<PageTitle>Verify Certificate - DICIS</PageTitle>
+
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-8 offset-md-2">
+            <div class="card">
+                <div class="card-header">
+                    <h3>Verify Certificate</h3>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label class="form-label">Certificate ID</label>
+                        <input type="text" class="form-control" @bind="certificateId" placeholder="Enter Certificate ID" />
+                    </div>
+                    <button class="btn btn-primary w-100" @onclick="VerifyCertificate" disabled="@isLoading">
+                        @if (isLoading)
+                        {
+                            <span class="spinner-border spinner-border-sm me-2"></span>
+                        }
+                        Verify
+                    </button>
+
+                    @if (verificationResult != null)
+                    {
+                        <div class="mt-4">
+                            @if (verificationResult.IsValid)
+                            {
+                                <div class="alert alert-success">
+                                    <h5>Certificate is Valid</h5>
+                                    <p><strong>Name:</strong> @verificationResult.Name</p>
+                                    <p><strong>State:</strong> @verificationResult.State</p>
+                                    <p><strong>LGA:</strong> @verificationResult.LGA</p>
+                                    <p><strong>Issued:</strong> @verificationResult.IssuedAt?.ToString("yyyy-MM-dd")</p>
+                                    <p><strong>Status:</strong> @verificationResult.Status</p>
+                                </div>
+                            }
+                            else
+                            {
+                                <div class="alert alert-danger">
+                                    <h5>Certificate is Invalid</h5>
+                                    <p>@verificationResult.Message</p>
+                                    @if (verificationResult.IsRevoked)
+                                    {
+                                        <p><strong>Revocation Reason:</strong> @verificationResult.RevocationReason</p>
+                                    }
+                                </div>
+                            }
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private string certificateId = string.Empty;
+    private Core.DTOs.CertificateVerifyResponse? verificationResult;
+    private bool isLoading = false;
+
+    private async Task VerifyCertificate()
+    {
+        if (string.IsNullOrEmpty(certificateId))
+        {
+            return;
+        }
+
+        isLoading = true;
+        verificationResult = null;
+
+        try
+        {
+            verificationResult = await ApplicationService.VerifyCertificateAsync(certificateId);
+        }
+        catch (Exception ex)
+        {
+            verificationResult = new Core.DTOs.CertificateVerifyResponse
+            {
+                IsValid = false,
+                Message = $"Error: {ex.Message}"
+            };
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+}

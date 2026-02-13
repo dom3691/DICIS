@@ -1,0 +1,249 @@
+@page "/admin/exceptions"
+@inject HttpClient Http
+@inject AuthService AuthService
+@inject NavigationManager Navigation
+@inject Blazored.LocalStorage.ILocalStorageService LocalStorage
+
+<PageTitle>Exception Review - DICIS</PageTitle>
+
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-12">
+            <h2>Exception Review Applications</h2>
+            
+            @if (isLoading)
+            {
+                <div class="text-center">
+                    <div class="spinner-border" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                </div>
+            }
+            else if (applications.Any())
+            {
+                <div class="table-responsive">
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Name</th>
+                                <th>State</th>
+                                <th>LGA</th>
+                                <th>Risk Score</th>
+                                <th>Confidence</th>
+                                <th>Submitted</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var app in applications)
+                            {
+                                <tr>
+                                    <td>@app.Id</td>
+                                    <td>@app.State</td>
+                                    <td>@app.LGA</td>
+                                    <td>
+                                        <span class="badge @(app.RiskScore > 50 ? "bg-danger" : "bg-warning")">
+                                            @app.RiskScore.ToString("F1")
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <span class="badge @(app.ConfidenceScore > 80 ? "bg-success" : "bg-warning")">
+                                            @app.ConfidenceScore.ToString("F1")
+                                        </span>
+                                    </td>
+                                    <td>@app.SubmittedAt?.ToString("yyyy-MM-dd")</td>
+                                    <td>
+                                        <button class="btn btn-sm btn-success" @onclick="() => ShowApproveModal(app.Id)">
+                                            Approve
+                                        </button>
+                                        <button class="btn btn-sm btn-danger" @onclick="() => ShowRejectModal(app.Id)">
+                                            Reject
+                                        </button>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+            else
+            {
+                <div class="alert alert-info">
+                    No applications pending exception review.
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+@if (showApproveModal)
+{
+    <div class="modal show d-block" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Approve Application</h5>
+                    <button type="button" class="btn-close" @onclick="CloseModals"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Notes (Optional)</label>
+                        <textarea class="form-control" @bind="approveNotes" rows="3"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @onclick="CloseModals">Cancel</button>
+                    <button type="button" class="btn btn-success" @onclick="ApproveApplication">Approve</button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@if (showRejectModal)
+{
+    <div class="modal show d-block" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Reject Application</h5>
+                    <button type="button" class="btn-close" @onclick="CloseModals"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Reason *</label>
+                        <textarea class="form-control" @bind="rejectReason" rows="3" required></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Notes (Optional)</label>
+                        <textarea class="form-control" @bind="rejectNotes" rows="2"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @onclick="CloseModals">Cancel</button>
+                    <button type="button" class="btn btn-danger" @onclick="RejectApplication">Reject</button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private List<Core.DTOs.ApplicationDTO> applications = new();
+    private bool isLoading = true;
+    private bool showApproveModal = false;
+    private bool showRejectModal = false;
+    private int selectedApplicationId = 0;
+    private string approveNotes = string.Empty;
+    private string rejectReason = string.Empty;
+    private string rejectNotes = string.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var isAuth = await AuthService.IsAuthenticatedAsync();
+        if (!isAuth)
+        {
+            Navigation.NavigateTo("/login");
+            return;
+        }
+
+        await LoadApplications();
+    }
+
+    private async Task LoadApplications()
+    {
+        try
+        {
+            var token = await LocalStorage.GetItemAsync<string>("authToken");
+            if (!string.IsNullOrEmpty(token))
+            {
+                Http.DefaultRequestHeaders.Authorization = 
+                    new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+            }
+            
+            applications = await Http.GetFromJsonAsync<List<Core.DTOs.ApplicationDTO>>("api/exceptionreview") ?? new();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error loading applications: {ex.Message}");
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private void ShowApproveModal(int id)
+    {
+        selectedApplicationId = id;
+        approveNotes = string.Empty;
+        showApproveModal = true;
+    }
+
+    private void ShowRejectModal(int id)
+    {
+        selectedApplicationId = id;
+        rejectReason = string.Empty;
+        rejectNotes = string.Empty;
+        showRejectModal = true;
+    }
+
+    private void CloseModals()
+    {
+        showApproveModal = false;
+        showRejectModal = false;
+    }
+
+    private async Task ApproveApplication()
+    {
+        try
+        {
+            var token = await LocalStorage.GetItemAsync<string>("authToken");
+            if (!string.IsNullOrEmpty(token))
+            {
+                Http.DefaultRequestHeaders.Authorization = 
+                    new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+            }
+
+            var response = await Http.PostAsJsonAsync($"api/exceptionreview/{selectedApplicationId}/approve", approveNotes);
+            response.EnsureSuccessStatusCode();
+            
+            CloseModals();
+            await LoadApplications();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error approving application: {ex.Message}");
+        }
+    }
+
+    private async Task RejectApplication()
+    {
+        if (string.IsNullOrEmpty(rejectReason))
+        {
+            return;
+        }
+
+        try
+        {
+            var token = await LocalStorage.GetItemAsync<string>("authToken");
+            if (!string.IsNullOrEmpty(token))
+            {
+                Http.DefaultRequestHeaders.Authorization = 
+                    new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+            }
+
+            var request = new { Reason = rejectReason, Notes = rejectNotes };
+            var response = await Http.PostAsJsonAsync($"api/exceptionreview/{selectedApplicationId}/reject", request);
+            response.EnsureSuccessStatusCode();
+            
+            CloseModals();
+            await LoadApplications();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error rejecting application: {ex.Message}");
+        }
+    }
+}
