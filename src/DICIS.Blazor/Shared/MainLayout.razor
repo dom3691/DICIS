@@ -1,4 +1,4 @@
-@inherits LayoutView
+@inherits LayoutComponentBase
 
 <div class="page">
     <div class="sidebar">
@@ -8,11 +8,7 @@
     <main>
         <div class="top-row px-4">
             <div class="ms-auto">
-                @if (IsAuthenticated)
-                {
-                    <span class="me-3">Welcome, @UserName</span>
-                    <button class="btn btn-sm btn-outline-secondary" @onclick="Logout">Logout</button>
-                }
+                <a href="/login" class="btn btn-sm btn-outline-secondary">Login</a>
             </div>
         </div>
 
@@ -21,16 +17,3 @@
         </article>
     </main>
 </div>
-
-@code {
-    [CascadingParameter]
-    private bool IsAuthenticated { get; set; }
-    
-    [CascadingParameter]
-    private string? UserName { get; set; }
-    
-    private void Logout()
-    {
-        // Implement logout logic
-    }
-}

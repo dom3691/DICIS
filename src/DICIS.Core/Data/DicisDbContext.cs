@@ -29,16 +29,34 @@ public class DicisDbContext : DbContext
             .HasIndex(u => u.Email)
             .IsUnique();
         
-        // Application constraints
+        // Configure ApplicationStatus enum to be stored as string
+        modelBuilder.Entity<Application>()
+            .Property(a => a.Status)
+            .HasConversion<string>()
+            .HasMaxLength(50);
+        
+        // Application constraints - unique index for approved applications only
         modelBuilder.Entity<Application>()
             .HasIndex(a => new { a.UserId, a.State })
             .IsUnique()
-            .HasFilter("[Status] IN ('Approved', 'Active')");
+            .HasFilter("[Status] = 'Approved'");
+        
+        // Configure CertificateStatus enum to be stored as string
+        modelBuilder.Entity<Certificate>()
+            .Property(c => c.Status)
+            .HasConversion<string>()
+            .HasMaxLength(50);
         
         // Certificate constraints
         modelBuilder.Entity<Certificate>()
             .HasIndex(c => c.CertificateId)
             .IsUnique();
+        
+        // Configure FraudReportStatus enum to be stored as string
+        modelBuilder.Entity<FraudReport>()
+            .Property(f => f.Status)
+            .HasConversion<string>()
+            .HasMaxLength(50);
         
         // AdminUser constraints
         modelBuilder.Entity<AdminUser>()

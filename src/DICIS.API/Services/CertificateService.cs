@@ -4,10 +4,11 @@ using DICIS.Core.Entities;
 using DICIS.Core.Services;
 using Microsoft.EntityFrameworkCore;
 using QRCoder;
+using QuestPDF.Fluent;
+using QuestPDF.Helpers;
+using QuestPDF.Infrastructure;
 using System.Security.Cryptography;
 using System.Text;
-using iTextSharp.text;
-using iTextSharp.text.pdf;
 
 namespace DICIS.API.Services;
 
@@ -58,7 +59,8 @@ public class CertificateService : ICertificateService
         var certificateId = GenerateCertificateId(application);
         
         // Generate QR code
-        var verificationUrl = $"{_environment.IsDevelopment() ? "https://localhost:5001" : "https://dicis.gov.ng"}/verify/{certificateId}";
+        var baseUrl = _environment.IsDevelopment() ? "https://localhost:5001" : "https://dicis.gov.ng";
+        var verificationUrl = $"{baseUrl}/verify/{certificateId}";
         var qrCodeData = GenerateQRCode(verificationUrl);
         
         // Generate PDF
@@ -215,6 +217,8 @@ public class CertificateService : ICertificateService
 
     private async Task<string> GeneratePDFAsync(Application application, string certificateId, string qrCodeBase64)
     {
+        QuestPDF.Settings.License = QuestPDF.Infrastructure.LicenseType.Community;
+        
         var certificatesDir = Path.Combine(_environment.ContentRootPath, "Certificates");
         if (!Directory.Exists(certificatesDir))
         {
@@ -224,67 +228,69 @@ public class CertificateService : ICertificateService
         var fileName = $"{certificateId}.pdf";
         var filePath = Path.Combine(certificatesDir, fileName);
         
-        using var fileStream = new FileStream(filePath, FileMode.Create);
-        var document = new Document(PageSize.A4, 50, 50, 25, 25);
-        var writer = PdfWriter.GetInstance(document, fileStream);
-        
-        document.Open();
-        
-        // Title
-        var titleFont = FontFactory.GetFont(FontFactory.HELVETICA_BOLD, 24);
-        var title = new Paragraph("CERTIFICATE OF INDIGENESHIP", titleFont)
-        {
-            Alignment = Element.ALIGN_CENTER,
-            SpacingAfter = 30
-        };
-        document.Add(title);
-        
-        // Certificate ID
-        var idFont = FontFactory.GetFont(FontFactory.HELVETICA, 10);
-        var idPara = new Paragraph($"Certificate ID: {certificateId}", idFont)
-        {
-            Alignment = Element.ALIGN_RIGHT,
-            SpacingAfter = 20
-        };
-        document.Add(idPara);
-        
-        // Body
-        var bodyFont = FontFactory.GetFont(FontFactory.HELVETICA, 12);
-        var bodyText = $"This is to certify that {application.User.FirstName} {application.User.MiddleName} {application.User.LastName} " +
-                       $"(NIN: {application.User.NIN}) is an indigene of {application.State} State, " +
-                       $"specifically from {application.LGA} Local Government Area.";
-        
-        var bodyPara = new Paragraph(bodyText, bodyFont)
-        {
-            Alignment = Element.ALIGN_JUSTIFIED,
-            SpacingAfter = 20
-        };
-        document.Add(bodyPara);
-        
-        // Date
+        var fullName = $"{application.User.FirstName} {application.User.MiddleName} {application.User.LastName}".Trim();
+        var bodyText = $"This is to certify that {fullName} (NIN: {application.User.NIN}) is an indigene of {application.State} State, specifically from {application.LGA} Local Government Area.";
         var dateText = $"Issued on: {DateTime.UtcNow:dd MMMM yyyy}";
-        var datePara = new Paragraph(dateText, bodyFont)
-        {
-            Alignment = Element.ALIGN_LEFT,
-            SpacingAfter = 30
-        };
-        document.Add(datePara);
         
-        // QR Code
-        try
+        var document = Document.Create(container =>
         {
-            var qrBytes = Convert.FromBase64String(qrCodeBase64);
-            var qrImage = Image.GetInstance(qrBytes);
-            qrImage.ScaleToFit(100, 100);
-            qrImage.Alignment = Element.ALIGN_RIGHT;
-            document.Add(qrImage);
-        }
-        catch
-        {
-            // If QR code fails, continue without it
-        }
+            container.Page(page =>
+            {
+                page.Size(PageSizes.A4);
+                page.Margin(2, Unit.Centimetre);
+                
+                page.Content()
+                    .Column(column =>
+                    {
+                        column.Spacing(20);
+                        
+                        // Title
+                        column.Item()
+                            .AlignCenter()
+                            .Text("CERTIFICATE OF INDIGENESHIP")
+                            .FontSize(24)
+                            .Bold();
+                        
+                        // Certificate ID
+                        column.Item()
+                            .AlignRight()
+                            .Text($"Certificate ID: {certificateId}")
+                            .FontSize(10);
+                        
+                        // Body text
+                        column.Item()
+                            .PaddingVertical(20)
+                            .Text(bodyText)
+                            .FontSize(12)
+                            .Justify();
+                        
+                        // Date
+                        column.Item()
+                            .Text(dateText)
+                            .FontSize(12);
+                        
+                        // QR Code
+                        if (!string.IsNullOrEmpty(qrCodeBase64))
+                        {
+                            try
+                            {
+                                var qrBytes = Convert.FromBase64String(qrCodeBase64);
+                                column.Item()
+                                    .AlignRight()
+                                    .Width(100)
+                                    .Height(100)
+                                    .Image(qrBytes);
+                            }
+                            catch
+                            {
+                                // If QR code fails, continue without it
+                            }
+                        }
+                    });
+            });
+        });
         
-        document.Close();
+        await Task.Run(() => document.GeneratePdf(filePath));
         
         return fileName;
     }
