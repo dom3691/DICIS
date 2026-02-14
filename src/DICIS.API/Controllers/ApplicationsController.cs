@@ -31,10 +31,24 @@ public class ApplicationsController : ControllerBase
     [HttpPost]
     public async Task<ActionResult<ApplicationDTO>> CreateApplication([FromBody] ApplicationCreateRequest request)
     {
+        // Check if user is an admin - admins cannot create applications
+        var userRole = User.FindFirst(ClaimTypes.Role)?.Value;
+        if (userRole == "SuperAdmin" || userRole == "Admin")
+        {
+            return BadRequest(new { message = "Administrators cannot create applications. Please login as a citizen to create an application." });
+        }
+
         var userId = GetUserId();
         if (userId == null)
         {
             return Unauthorized();
+        }
+
+        // Verify the user exists in the Users table (not AdminUsers)
+        var user = await _context.Users.FindAsync(userId.Value);
+        if (user == null)
+        {
+            return BadRequest(new { message = "User not found. Please login as a citizen to create an application." });
         }
 
         // Check for duplicate
@@ -71,19 +85,25 @@ public class ApplicationsController : ControllerBase
     [HttpGet("{id}")]
     public async Task<ActionResult<ApplicationDTO>> GetApplication(int id)
     {
-        var userId = GetUserId();
-        if (userId == null)
-        {
-            return Unauthorized();
-        }
-
+        var userRole = User.FindFirst(ClaimTypes.Role)?.Value;
+        
         var application = await _context.Applications
             .Include(a => a.Certificate)
-            .FirstOrDefaultAsync(a => a.Id == id && a.UserId == userId);
+            .FirstOrDefaultAsync(a => a.Id == id);
 
         if (application == null)
         {
             return NotFound();
+        }
+
+        // SuperAdmin can see any application, regular users can only see their own
+        if (userRole != "SuperAdmin")
+        {
+            var userId = GetUserId();
+            if (userId == null || application.UserId != userId)
+            {
+                return Forbid();
+            }
         }
 
         return Ok(MapToDTO(application));
@@ -92,6 +112,18 @@ public class ApplicationsController : ControllerBase
     [HttpGet]
     public async Task<ActionResult<List<ApplicationDTO>>> GetApplications()
     {
+        var userRole = User.FindFirst(ClaimTypes.Role)?.Value;
+        
+        // SuperAdmin can see all applications, regular users see only their own
+        if (userRole == "SuperAdmin")
+        {
+            var allApplications = await _context.Applications
+                .Include(a => a.Certificate)
+                .OrderByDescending(a => a.CreatedAt)
+                .ToListAsync();
+            return Ok(allApplications.Select(MapToDTO).ToList());
+        }
+
         var userId = GetUserId();
         if (userId == null)
         {
