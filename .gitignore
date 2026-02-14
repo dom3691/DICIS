@@ -25,7 +25,6 @@ bld/
 .vs/
 
 # Visual Studio Code
-.vscode/
 
 # JetBrains Rider
 .idea/
@@ -62,6 +61,10 @@ src/DICIS.API/Certificates/
 *.ldf
 
 # Environment variables
-.env
-.env.local
 /src/DICIS.API/Migrations
+branch_structure.json
+temp_auto_push.bat
+temp_interactive_push.bat
+.gitignore
+config.bat
+node_modules

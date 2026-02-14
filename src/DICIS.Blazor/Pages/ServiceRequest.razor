@@ -1,0 +1,163 @@
+@page "/services"
+@page "/services/request"
+@inject ServiceRequestService ServiceRequestService
+@inject ProfileService ProfileService
+@inject AuthService AuthService
+@inject NavigationManager Navigation
+
+<PageTitle>Request Service - DICIS</PageTitle>
+
+<div class="container" style="max-width: 800px;">
+    <div style="margin-bottom: 32px;">
+        <h1 style="margin-bottom: 8px;">Request a Service</h1>
+        <p class="small-text" style="color: var(--color-text-secondary);">
+            Select a service to request. Payment is required before processing.
+        </p>
+    </div>
+
+    @if (isLoading)
+    {
+        <div class="text-center" style="padding: 64px;">
+            <div class="spinner-border" style="width: 48px; height: 48px; border-width: 4px;" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+        </div>
+    }
+    else
+    {
+        <div class="card" style="border: none; box-shadow: var(--shadow-md);">
+            <div class="card-body" style="padding: 40px;">
+                @if (!string.IsNullOrEmpty(errorMessage))
+                {
+                    <div class="alert alert-danger">
+                        <i class="bi bi-exclamation-triangle-fill" style="margin-right: 8px;"></i>
+                        @errorMessage
+                    </div>
+                }
+
+                <div class="mb-4">
+                    <label class="form-label">Service Type *</label>
+                    <InputSelect class="form-select" @bind-Value="selectedServiceType">
+                        <option value="">Select Service</option>
+                        <option value="IndigeneCertificate">Indigene Certificate - ₦@(servicePrices.ContainsKey("IndigeneCertificate") ? servicePrices["IndigeneCertificate"].ToString("N2") : "5,000.00")</option>
+                        <option value="StateOfOrigin">State of Origin - ₦@(servicePrices.ContainsKey("StateOfOrigin") ? servicePrices["StateOfOrigin"].ToString("N2") : "3,000.00")</option>
+                        <option value="LocalGovernmentCertificate">Local Government Certificate - ₦@(servicePrices.ContainsKey("LocalGovernmentCertificate") ? servicePrices["LocalGovernmentCertificate"].ToString("N2") : "2,000.00")</option>
+                    </InputSelect>
+                </div>
+
+                @if (!string.IsNullOrEmpty(selectedServiceType))
+                {
+                    <div class="alert alert-info">
+                        <strong>Service Price:</strong> ₦@(GetServicePrice().ToString("N2"))
+                        <br />
+                        <small>Payment will be required before processing your request.</small>
+                    </div>
+                }
+
+                <div class="mb-4">
+                    <label class="form-label">Notes (Optional)</label>
+                    <InputTextArea class="form-control" @bind-Value="notes" rows="3" placeholder="Any additional information..." />
+                </div>
+
+                <div style="display: flex; justify-content: flex-end; gap: 16px; margin-top: 32px;">
+                    <a href="/" class="btn btn-outline">Cancel</a>
+                    <button class="btn btn-primary" @onclick="CreateServiceRequest" disabled="@isLoading || string.IsNullOrEmpty(selectedServiceType)">
+                        @if (isLoading)
+                        {
+                            <span class="spinner-border spinner-border-sm me-2"></span>
+                        }
+                        <i class="bi bi-arrow-right" style="margin-right: 8px;"></i>
+                        Continue to Payment
+                    </button>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    private string selectedServiceType = string.Empty;
+    private string notes = string.Empty;
+    private Dictionary<string, decimal> servicePrices = new();
+    private bool isLoading = false;
+    private string errorMessage = string.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var isAuth = await AuthService.IsAuthenticatedAsync();
+        if (!isAuth)
+        {
+            Navigation.NavigateTo("/login");
+            return;
+        }
+
+        // Check profile status
+        var (isComplete, isVerified) = await ProfileService.CheckProfileStatusAsync();
+        if (!isComplete)
+        {
+            Navigation.NavigateTo("/profile/create");
+            return;
+        }
+        if (!isVerified)
+        {
+            errorMessage = "Please verify your email address before requesting services.";
+            return;
+        }
+
+        await LoadServicePrices();
+    }
+
+    private async Task LoadServicePrices()
+    {
+        try
+        {
+            servicePrices = await ServiceRequestService.GetServicePricesAsync();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error loading service prices: {ex.Message}";
+        }
+    }
+
+    private decimal GetServicePrice()
+    {
+        if (string.IsNullOrEmpty(selectedServiceType))
+            return 0;
+
+        var key = selectedServiceType;
+        return servicePrices.ContainsKey(key) ? servicePrices[key] : 0;
+    }
+
+    private async Task CreateServiceRequest()
+    {
+        if (string.IsNullOrEmpty(selectedServiceType))
+        {
+            errorMessage = "Please select a service type";
+            return;
+        }
+
+        isLoading = true;
+        errorMessage = string.Empty;
+
+        try
+        {
+            var serviceType = Enum.Parse<Core.Entities.ServiceType>(selectedServiceType);
+            var request = new CreateServiceRequestDTO
+            {
+                ServiceType = serviceType,
+                Notes = notes
+            };
+
+            var serviceRequest = await ServiceRequestService.CreateServiceRequestAsync(request);
+            Navigation.NavigateTo($"/services/payment/{serviceRequest.Id}");
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error: {ex.Message}";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+}

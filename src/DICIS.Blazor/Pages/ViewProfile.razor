@@ -1,0 +1,191 @@
+@page "/profile/view"
+@inject ProfileService ProfileService
+@inject AuthService AuthService
+@inject NavigationManager Navigation
+
+<PageTitle>My Profile - DICIS</PageTitle>
+
+<div class="container" style="max-width: 800px;">
+    <div style="margin-bottom: 32px; display: flex; justify-content: space-between; align-items: center;">
+        <div>
+            <h1 style="margin-bottom: 8px;">My Profile</h1>
+            <p class="small-text" style="color: var(--color-text-secondary);">
+                View and manage your profile information
+            </p>
+        </div>
+        <a href="/profile/edit" class="btn btn-outline">
+            <i class="bi bi-pencil" style="margin-right: 8px;"></i>
+            Edit Profile
+        </a>
+    </div>
+
+    @if (isLoading)
+    {
+        <div class="text-center" style="padding: 64px;">
+            <div class="spinner-border" style="width: 48px; height: 48px; border-width: 4px;" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+        </div>
+    }
+    else if (profile != null)
+    {
+        <div class="card" style="border: none; box-shadow: var(--shadow-md);">
+            <div class="card-body" style="padding: 40px;">
+                @if (!profile.IsEmailVerified)
+                {
+                    <div class="alert alert-warning">
+                        <i class="bi bi-exclamation-triangle-fill" style="margin-right: 8px;"></i>
+                        <strong>Email not verified.</strong> Please verify your email to access all services.
+                        <button class="btn btn-sm btn-outline" style="margin-left: 16px;" @onclick="ResendVerification">
+                            Resend Verification Email
+                        </button>
+                    </div>
+                }
+
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <span class="caption" style="color: var(--color-text-secondary);">Full Name</span>
+                        <h3 style="margin: 4px 0 0 0;">
+                            @profile.FirstName @profile.MiddleName @profile.LastName
+                        </h3>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <span class="caption" style="color: var(--color-text-secondary);">Email</span>
+                        <p style="margin: 4px 0 0 0; font-weight: 500;">
+                            @profile.Email
+                            @if (profile.IsEmailVerified)
+                            {
+                                <span class="badge badge-approved" style="margin-left: 8px;">Verified</span>
+                            }
+                            else
+                            {
+                                <span class="badge badge-pending" style="margin-left: 8px;">Not Verified</span>
+                            }
+                        </p>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <span class="caption" style="color: var(--color-text-secondary);">Phone Number</span>
+                        <p style="margin: 4px 0 0 0; font-weight: 500;">@profile.PhoneNumber</p>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <span class="caption" style="color: var(--color-text-secondary);">Date of Birth</span>
+                        <p style="margin: 4px 0 0 0; font-weight: 500;">@profile.DateOfBirth.ToString("dd MMMM yyyy")</p>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-4 mb-3">
+                        <span class="caption" style="color: var(--color-text-secondary);">Country</span>
+                        <p style="margin: 4px 0 0 0; font-weight: 500;">@profile.Country</p>
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <span class="caption" style="color: var(--color-text-secondary);">State</span>
+                        <p style="margin: 4px 0 0 0; font-weight: 500;">@profile.State</p>
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <span class="caption" style="color: var(--color-text-secondary);">Local Government</span>
+                        <p style="margin: 4px 0 0 0; font-weight: 500;">@profile.LocalGovernment</p>
+                    </div>
+                </div>
+
+                @if (!string.IsNullOrEmpty(profile.Address))
+                {
+                    <div class="mb-3">
+                        <span class="caption" style="color: var(--color-text-secondary);">Address</span>
+                        <p style="margin: 4px 0 0 0; font-weight: 500;">@profile.Address</p>
+                    </div>
+                }
+
+                @if (!string.IsNullOrEmpty(profile.NIN))
+                {
+                    <div class="mb-3">
+                        <span class="caption" style="color: var(--color-text-secondary);">NIN</span>
+                        <p style="margin: 4px 0 0 0; font-weight: 500;">@profile.NIN</p>
+                    </div>
+                }
+
+                <div style="margin-top: 32px; padding-top: 32px; border-top: 1px solid var(--color-border);">
+                    <span class="caption" style="color: var(--color-text-secondary);">Profile Status</span>
+                    <div style="display: flex; gap: 16px; margin-top: 8px;">
+                        @if (profile.IsProfileComplete)
+                        {
+                            <span class="badge badge-approved">Profile Complete</span>
+                        }
+                        else
+                        {
+                            <span class="badge badge-pending">Profile Incomplete</span>
+                        }
+                        @if (profile.IsEmailVerified)
+                        {
+                            <span class="badge badge-approved">Email Verified</span>
+                        }
+                        else
+                        {
+                            <span class="badge badge-pending">Email Not Verified</span>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+    else
+    {
+        <div class="card text-center" style="border: none; box-shadow: var(--shadow-md); padding: 64px;">
+            <div style="font-size: 64px; color: var(--color-text-light); margin-bottom: 24px;">
+                <i class="bi bi-person-plus"></i>
+            </div>
+            <h3 style="margin-bottom: 16px; color: var(--color-text-primary);">No Profile Found</h3>
+            <p class="small-text" style="color: var(--color-text-secondary); margin-bottom: 32px;">
+                Create your profile to access all services.
+            </p>
+            <a href="/profile/create" class="btn btn-primary">
+                <i class="bi bi-plus-circle" style="margin-right: 8px;"></i>
+                Create Profile
+            </a>
+        </div>
+    }
+</div>
+
+@code {
+    private ProfileDTO? profile;
+    private bool isLoading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var isAuth = await AuthService.IsAuthenticatedAsync();
+        if (!isAuth)
+        {
+            Navigation.NavigateTo("/login");
+            return;
+        }
+
+        await LoadProfile();
+    }
+
+    private async Task LoadProfile()
+    {
+        try
+        {
+            profile = await ProfileService.GetProfileAsync();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error loading profile: {ex.Message}");
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private async Task ResendVerification()
+    {
+        if (profile != null)
+        {
+            await ProfileService.ResendVerificationEmailAsync(profile.Email);
+        }
+    }
+}

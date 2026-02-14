@@ -26,6 +26,7 @@ public class ApplicationDTO
     public DateTime CreatedAt { get; set; }
     public DateTime? SubmittedAt { get; set; }
     public DateTime? ApprovedAt { get; set; }
+    public int? ServiceRequestId { get; set; }
     public CertificateDTO? Certificate { get; set; }
 }
 

@@ -1,5 +1,7 @@
 @page "/apply"
 @inject ApplicationService ApplicationService
+@inject ProfileService ProfileService
+@inject ServiceRequestService ServiceRequestService
 @inject AuthService AuthService
 @inject NavigationManager Navigation
 
@@ -162,6 +164,19 @@
         if (!isAuth)
         {
             Navigation.NavigateTo("/login");
+            return;
+        }
+
+        // Check if profile is complete and email is verified
+        var (isComplete, isVerified) = await ProfileService.CheckProfileStatusAsync();
+        if (!isComplete)
+        {
+            Navigation.NavigateTo("/profile/create");
+            return;
+        }
+        if (!isVerified)
+        {
+            errorMessage = "Please verify your email address before applying for a certificate.";
         }
     }
 

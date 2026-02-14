@@ -11,6 +11,8 @@ public class Application
     [Required]
     public int UserId { get; set; }
     
+    public int? ServiceRequestId { get; set; } // Link to service request
+    
     [Required]
     [StringLength(50)]
     public string State { get; set; } = string.Empty;
@@ -56,6 +58,9 @@ public class Application
     // Navigation properties
     [ForeignKey("UserId")]
     public virtual User User { get; set; } = null!;
+    
+    [ForeignKey("ServiceRequestId")]
+    public virtual ServiceRequest? ServiceRequest { get; set; }
     
     public virtual Certificate? Certificate { get; set; }
     
