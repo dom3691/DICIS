@@ -5,81 +5,146 @@
 
 <PageTitle>Apply for Certificate - DICIS</PageTitle>
 
-<div class="container mt-4">
-    <div class="row">
-        <div class="col-md-8 offset-md-2">
-            <div class="card">
-                <div class="card-header">
-                    <h3>Apply for Indigene Certificate</h3>
+<div class="container" style="max-width: 800px;">
+    <div style="margin-bottom: 32px;">
+        <h1 style="margin-bottom: 8px;">Apply for Indigene Certificate</h1>
+        <p class="small-text" style="color: var(--color-text-secondary);">
+            Complete the form below to apply for your digital indigene certificate
+        </p>
+    </div>
+
+    <!-- Stepper -->
+    <div class="stepper" style="margin-bottom: 48px;">
+        <div class="step @(currentStep >= 1 ? "active" : "") @(currentStep > 1 ? "completed" : "")">
+            <div class="step-number">1</div>
+            <div class="step-label">Identity</div>
+        </div>
+        <div class="step @(currentStep >= 2 ? "active" : "") @(currentStep > 2 ? "completed" : "")">
+            <div class="step-number">2</div>
+            <div class="step-label">Parent Details</div>
+        </div>
+        <div class="step @(currentStep >= 3 ? "active" : "") @(currentStep > 3 ? "completed" : "")">
+            <div class="step-number">3</div>
+            <div class="step-label">State & LGA</div>
+        </div>
+        <div class="step @(currentStep >= 4 ? "active" : "") @(currentStep > 4 ? "completed" : "")">
+            <div class="step-number">4</div>
+            <div class="step-label">Declaration</div>
+        </div>
+    </div>
+
+    <div class="card" style="border: none; box-shadow: var(--shadow-md);">
+        <div class="card-body" style="padding: 40px;">
+            @if (!string.IsNullOrEmpty(successMessage))
+            {
+                <div class="alert alert-success">
+                    <i class="bi bi-check-circle-fill" style="margin-right: 8px;"></i>
+                    @successMessage
                 </div>
-                <div class="card-body">
-                    @if (!string.IsNullOrEmpty(successMessage))
-                    {
-                        <div class="alert alert-success">@successMessage</div>
-                    }
-                    
-                    @if (!string.IsNullOrEmpty(errorMessage))
-                    {
-                        <div class="alert alert-danger">@errorMessage</div>
-                    }
-
-                    <EditForm Model="@applicationRequest" OnValidSubmit="HandleSubmit">
-                        <DataAnnotationsValidator />
-                        
-                        <div class="mb-3">
-                            <label class="form-label">State *</label>
-                            <InputSelect class="form-select" @bind-Value="applicationRequest.State">
-                                <option value="">Select State</option>
-                                <option value="Lagos">Lagos</option>
-                                <option value="Abuja">Abuja</option>
-                                <option value="Kano">Kano</option>
-                                <option value="Rivers">Rivers</option>
-                                <option value="Ogun">Ogun</option>
-                                <option value="Oyo">Oyo</option>
-                                <option value="Kaduna">Kaduna</option>
-                                <option value="Enugu">Enugu</option>
-                                <option value="Delta">Delta</option>
-                                <option value="Anambra">Anambra</option>
-                            </InputSelect>
-                            <ValidationMessage For="@(() => applicationRequest.State)" />
-                        </div>
-
-                        <div class="mb-3">
-                            <label class="form-label">Local Government Area (LGA) *</label>
-                            <InputText class="form-control" @bind-Value="applicationRequest.LGA" />
-                            <ValidationMessage For="@(() => applicationRequest.LGA)" />
-                        </div>
-
-                        <div class="mb-3">
-                            <label class="form-label">Father's NIN (Optional)</label>
-                            <InputText class="form-control" @bind-Value="applicationRequest.FatherNIN" maxlength="11" />
-                        </div>
-
-                        <div class="mb-3">
-                            <label class="form-label">Mother's NIN (Optional)</label>
-                            <InputText class="form-control" @bind-Value="applicationRequest.MotherNIN" maxlength="11" />
-                        </div>
-
-                        <div class="mb-3">
-                            <div class="form-check">
-                                <InputCheckbox class="form-check-input" @bind-Value="applicationRequest.DeclarationAccepted" />
-                                <label class="form-check-label">
-                                    I declare that the information provided is true and correct *
-                                </label>
-                            </div>
-                            <ValidationMessage For="@(() => applicationRequest.DeclarationAccepted)" />
-                        </div>
-
-                        <button type="submit" class="btn btn-primary w-100" disabled="@isLoading">
-                            @if (isLoading)
-                            {
-                                <span class="spinner-border spinner-border-sm me-2"></span>
-                            }
-                            Submit Application
-                        </button>
-                    </EditForm>
+            }
+            
+            @if (!string.IsNullOrEmpty(errorMessage))
+            {
+                <div class="alert alert-danger">
+                    <i class="bi bi-exclamation-triangle-fill" style="margin-right: 8px;"></i>
+                    @errorMessage
                 </div>
-            </div>
+            }
+
+            <EditForm Model="@applicationRequest" OnValidSubmit="HandleSubmit">
+                <DataAnnotationsValidator />
+                
+                <div class="mb-3">
+                    <label class="form-label">
+                        <i class="bi bi-geo-alt" style="margin-right: 8px;"></i>
+                        State *
+                    </label>
+                    <InputSelect class="form-select" @bind-Value="applicationRequest.State">
+                        <option value="">Select State</option>
+                        <option value="Lagos">Lagos</option>
+                        <option value="Abuja">Abuja</option>
+                        <option value="Kano">Kano</option>
+                        <option value="Rivers">Rivers</option>
+                        <option value="Ogun">Ogun</option>
+                        <option value="Oyo">Oyo</option>
+                        <option value="Kaduna">Kaduna</option>
+                        <option value="Enugu">Enugu</option>
+                        <option value="Delta">Delta</option>
+                        <option value="Anambra">Anambra</option>
+                        <option value="Imo">Imo</option>
+                        <option value="Ebonyi">Ebonyi</option>
+                        <option value="Abia">Abia</option>
+                        <option value="Akwa Ibom">Akwa Ibom</option>
+                        <option value="Bayelsa">Bayelsa</option>
+                        <option value="Cross River">Cross River</option>
+                        <option value="Edo">Edo</option>
+                        <option value="Ekiti">Ekiti</option>
+                        <option value="Osun">Osun</option>
+                        <option value="Ondo">Ondo</option>
+                        <option value="Kwara">Kwara</option>
+                        <option value="Benue">Benue</option>
+                        <option value="Plateau">Plateau</option>
+                        <option value="Nasarawa">Nasarawa</option>
+                        <option value="Niger">Niger</option>
+                        <option value="Kogi">Kogi</option>
+                        <option value="FCT">Federal Capital Territory</option>
+                    </InputSelect>
+                    <ValidationMessage For="@(() => applicationRequest.State)" />
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">
+                        <i class="bi bi-building" style="margin-right: 8px;"></i>
+                        Local Government Area (LGA) *
+                    </label>
+                    <InputText class="form-control" @bind-Value="applicationRequest.LGA" placeholder="Enter your LGA" />
+                    <ValidationMessage For="@(() => applicationRequest.LGA)" />
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">
+                        <i class="bi bi-person" style="margin-right: 8px;"></i>
+                        Father's NIN (Optional)
+                    </label>
+                    <InputText class="form-control" @bind-Value="applicationRequest.FatherNIN" maxlength="11" placeholder="11-digit NIN" />
+                    <small class="form-text">Helps verify your parentage linkage</small>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">
+                        <i class="bi bi-person" style="margin-right: 8px;"></i>
+                        Mother's NIN (Optional)
+                    </label>
+                    <InputText class="form-control" @bind-Value="applicationRequest.MotherNIN" maxlength="11" placeholder="11-digit NIN" />
+                    <small class="form-text">Helps verify your parentage linkage</small>
+                </div>
+
+                <div class="mb-4" style="padding: 20px; background: var(--color-bg-primary); border-radius: var(--radius-md); border: 2px solid var(--color-border);">
+                    <div class="form-check">
+                        <InputCheckbox class="form-check-input" @bind-Value="applicationRequest.DeclarationAccepted" style="width: 20px; height: 20px; cursor: pointer;" />
+                        <label class="form-check-label" style="margin-left: 12px; cursor: pointer;">
+                            <strong>I declare that the information provided is true and correct</strong> *
+                            <br />
+                            <span class="small-text" style="color: var(--color-text-secondary);">
+                                I understand that providing false information may result in legal consequences.
+                            </span>
+                        </label>
+                    </div>
+                    <ValidationMessage For="@(() => applicationRequest.DeclarationAccepted)" />
+                </div>
+
+                <div style="display: flex; justify-content: flex-end; gap: 16px; margin-top: 32px;">
+                    <a href="/" class="btn btn-outline">Cancel</a>
+                    <button type="submit" class="btn btn-primary" disabled="@isLoading">
+                        @if (isLoading)
+                        {
+                            <span class="spinner-border spinner-border-sm me-2"></span>
+                        }
+                        <i class="bi bi-send" style="margin-right: 8px;"></i>
+                        Submit Application
+                    </button>
+                </div>
+            </EditForm>
         </div>
     </div>
 </div>
@@ -89,6 +154,7 @@
     private bool isLoading = false;
     private string errorMessage = string.Empty;
     private string successMessage = string.Empty;
+    private int currentStep = 3; // Default to step 3 (State & LGA)
 
     protected override async Task OnInitializedAsync()
     {
@@ -113,18 +179,26 @@
             if (submitted.Status == Core.Entities.ApplicationStatus.Approved && submitted.Certificate != null)
             {
                 successMessage = $"Application approved! Certificate ID: {submitted.Certificate.CertificateId}";
+                await Task.Delay(2000);
                 Navigation.NavigateTo($"/applications/{application.Id}");
             }
             else if (submitted.Status == Core.Entities.ApplicationStatus.ExceptionReview)
             {
                 successMessage = "Application submitted and is under review. You will be notified once processed.";
+                await Task.Delay(2000);
                 Navigation.NavigateTo($"/applications/{application.Id}");
             }
             else
             {
                 successMessage = "Application submitted successfully!";
+                await Task.Delay(2000);
                 Navigation.NavigateTo($"/applications");
             }
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            errorMessage = ex.Message;
+            Navigation.NavigateTo("/login");
         }
         catch (Exception ex)
         {

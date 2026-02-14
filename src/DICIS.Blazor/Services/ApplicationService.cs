@@ -21,15 +21,39 @@ public class ApplicationService
         var token = await _localStorage.GetItemAsync<string>("authToken");
         if (!string.IsNullOrEmpty(token))
         {
+            // Remove existing authorization header if any
+            _httpClient.DefaultRequestHeaders.Remove("Authorization");
+            // Add new authorization header
             _httpClient.DefaultRequestHeaders.Authorization = 
                 new AuthenticationHeaderValue("Bearer", token);
+        }
+        else
+        {
+            // If no token, remove authorization header
+            _httpClient.DefaultRequestHeaders.Remove("Authorization");
         }
     }
 
     public async Task<ApplicationDTO> CreateApplicationAsync(ApplicationCreateRequest request)
     {
         await SetAuthHeaderAsync();
+        
+        // Verify token is set
+        var token = await _localStorage.GetItemAsync<string>("authToken");
+        if (string.IsNullOrEmpty(token))
+        {
+            throw new UnauthorizedAccessException("Not authenticated. Please login first.");
+        }
+        
         var response = await _httpClient.PostAsJsonAsync("api/applications", request);
+        
+        if (response.StatusCode == System.Net.HttpStatusCode.Unauthorized)
+        {
+            // Token might be invalid, clear it
+            await _localStorage.RemoveItemAsync("authToken");
+            throw new UnauthorizedAccessException("Session expired. Please login again.");
+        }
+        
         response.EnsureSuccessStatusCode();
         return await response.Content.ReadFromJsonAsync<ApplicationDTO>() ?? new ApplicationDTO();
     }

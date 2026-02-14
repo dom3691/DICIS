@@ -5,65 +5,128 @@
 
 <PageTitle>My Applications - DICIS</PageTitle>
 
-<div class="container mt-4">
-    <div class="row">
-        <div class="col-12">
-            <h2>My Applications</h2>
-            
-            @if (isLoading)
-            {
-                <div class="text-center">
-                    <div class="spinner-border" role="status">
-                        <span class="visually-hidden">Loading...</span>
+<div class="container">
+    <div style="margin-bottom: 32px;">
+        <h1 style="margin-bottom: 8px;">My Applications</h1>
+        <p class="small-text" style="color: var(--color-text-secondary);">
+            Track the status of your indigene certificate applications
+        </p>
+    </div>
+    
+    @if (isLoading)
+    {
+        <div class="text-center" style="padding: 64px;">
+            <div class="spinner-border" style="width: 48px; height: 48px; border-width: 4px;" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+        </div>
+    }
+    else if (applications.Any())
+    {
+        <!-- Status Summary Cards -->
+        <div class="row" style="margin-bottom: 32px;">
+            <div class="col-md-3">
+                <div class="card" style="border-left: 4px solid var(--color-warning);">
+                    <div style="padding: 20px;">
+                        <div class="caption" style="color: var(--color-text-secondary); margin-bottom: 8px;">Pending</div>
+                        <h2 style="margin: 0; color: var(--color-warning);">@applications.Count(a => a.Status == Core.Entities.ApplicationStatus.PendingVerification)</h2>
                     </div>
                 </div>
-            }
-            else if (applications.Any())
-            {
-                <div class="table-responsive">
-                    <table class="table table-striped">
-                        <thead>
-                            <tr>
-                                <th>ID</th>
-                                <th>State</th>
-                                <th>LGA</th>
-                                <th>Status</th>
-                                <th>Submitted</th>
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @foreach (var app in applications)
-                            {
-                                <tr>
-                                    <td>@app.Id</td>
-                                    <td>@app.State</td>
-                                    <td>@app.LGA</td>
-                                    <td>
-                                        <span class="badge @GetStatusBadgeClass(app.Status)">@app.Status</span>
-                                    </td>
-                                    <td>@app.SubmittedAt?.ToString("yyyy-MM-dd")</td>
-                                    <td>
-                                        <a href="/applications/@app.Id" class="btn btn-sm btn-outline-primary">View</a>
+            </div>
+            <div class="col-md-3">
+                <div class="card" style="border-left: 4px solid var(--color-success);">
+                    <div style="padding: 20px;">
+                        <div class="caption" style="color: var(--color-text-secondary); margin-bottom: 8px;">Approved</div>
+                        <h2 style="margin: 0; color: var(--color-success);">@applications.Count(a => a.Status == Core.Entities.ApplicationStatus.Approved)</h2>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card" style="border-left: 4px solid #2563EB;">
+                    <div style="padding: 20px;">
+                        <div class="caption" style="color: var(--color-text-secondary); margin-bottom: 8px;">Under Review</div>
+                        <h2 style="margin: 0; color: #2563EB;">@applications.Count(a => a.Status == Core.Entities.ApplicationStatus.ExceptionReview)</h2>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card" style="border-left: 4px solid var(--color-error);">
+                    <div style="padding: 20px;">
+                        <div class="caption" style="color: var(--color-text-secondary); margin-bottom: 8px;">Rejected</div>
+                        <h2 style="margin: 0; color: var(--color-error);">@applications.Count(a => a.Status == Core.Entities.ApplicationStatus.Rejected)</h2>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Applications Table -->
+        <div class="card" style="border: none; box-shadow: var(--shadow-md);">
+            <div class="card-header" style="background: white; border-bottom: 1px solid var(--color-border);">
+                <h3 style="margin: 0;">Application History</h3>
+            </div>
+            <div style="overflow-x: auto;">
+                <table style="width: 100%; border-collapse: collapse;">
+                    <thead>
+                        <tr style="background: var(--color-bg-primary); border-bottom: 2px solid var(--color-border);">
+                            <th style="padding: 16px; text-align: left; font-weight: 600; color: var(--color-text-primary);">ID</th>
+                            <th style="padding: 16px; text-align: left; font-weight: 600; color: var(--color-text-primary);">State</th>
+                            <th style="padding: 16px; text-align: left; font-weight: 600; color: var(--color-text-primary);">LGA</th>
+                            <th style="padding: 16px; text-align: left; font-weight: 600; color: var(--color-text-primary);">Status</th>
+                            <th style="padding: 16px; text-align: left; font-weight: 600; color: var(--color-text-primary);">Submitted</th>
+                            <th style="padding: 16px; text-align: left; font-weight: 600; color: var(--color-text-primary);">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var app in applications)
+                        {
+                            <tr style="border-bottom: 1px solid var(--color-border);">
+                                <td style="padding: 16px;">#@app.Id</td>
+                                <td style="padding: 16px; font-weight: 500;">@app.State</td>
+                                <td style="padding: 16px;">@app.LGA</td>
+                                <td style="padding: 16px;">
+                                    <span class="badge @GetStatusBadgeClass(app.Status)">@app.Status</span>
+                                </td>
+                                <td style="padding: 16px; color: var(--color-text-secondary);">
+                                    @app.SubmittedAt?.ToString("dd MMM yyyy")
+                                </td>
+                                <td style="padding: 16px;">
+                                    <div style="display: flex; gap: 8px;">
+                                        <a href="/applications/@app.Id" class="btn btn-sm btn-outline" style="min-height: 32px;">
+                                            <i class="bi bi-eye" style="margin-right: 4px;"></i>
+                                            View
+                                        </a>
                                         @if (app.Certificate != null)
                                         {
-                                            <a href="/certificate/@app.Certificate.CertificateId" class="btn btn-sm btn-success">Download</a>
+                                            <a href="/certificate/@app.Certificate.CertificateId" class="btn btn-sm btn-primary" style="min-height: 32px;">
+                                                <i class="bi bi-download" style="margin-right: 4px;"></i>
+                                                Download
+                                            </a>
                                         }
-                                    </td>
-                                </tr>
-                            }
-                        </tbody>
-                    </table>
-                </div>
-            }
-            else
-            {
-                <div class="alert alert-info">
-                    No applications found. <a href="/apply">Apply for a certificate</a>
-                </div>
-            }
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
         </div>
-    </div>
+    }
+    else
+    {
+        <div class="card text-center" style="border: none; box-shadow: var(--shadow-md); padding: 64px;">
+            <div style="font-size: 64px; color: var(--color-text-light); margin-bottom: 24px;">
+                <i class="bi bi-inbox"></i>
+            </div>
+            <h3 style="margin-bottom: 16px; color: var(--color-text-primary);">No Applications Found</h3>
+            <p class="small-text" style="color: var(--color-text-secondary); margin-bottom: 32px;">
+                You haven't submitted any applications yet.
+            </p>
+            <a href="/apply" class="btn btn-primary">
+                <i class="bi bi-plus-circle" style="margin-right: 8px;"></i>
+                Apply for Certificate
+            </a>
+        </div>
+    }
 </div>
 
 @code {
@@ -102,11 +165,11 @@
     {
         return status switch
         {
-            Core.Entities.ApplicationStatus.Approved => "bg-success",
-            Core.Entities.ApplicationStatus.Rejected => "bg-danger",
-            Core.Entities.ApplicationStatus.PendingVerification => "bg-warning",
-            Core.Entities.ApplicationStatus.ExceptionReview => "bg-info",
-            _ => "bg-secondary"
+            Core.Entities.ApplicationStatus.Approved => "badge-approved",
+            Core.Entities.ApplicationStatus.Rejected => "badge-revoked",
+            Core.Entities.ApplicationStatus.PendingVerification => "badge-pending",
+            Core.Entities.ApplicationStatus.ExceptionReview => "badge-exception",
+            _ => "badge-pending"
         };
     }
 }

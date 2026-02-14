@@ -1,19 +1,57 @@
 @inherits LayoutComponentBase
+@inject AuthService AuthService
+@inject NavigationManager Navigation
 
 <div class="page">
-    <div class="sidebar">
+    <div class="sidebar" style="background: linear-gradient(180deg, #0B6B3A 0%, #0A5A2F 100%); width: 280px;">
         <NavMenu />
     </div>
 
-    <main>
-        <div class="top-row px-4">
-            <div class="ms-auto">
-                <a href="/login" class="btn btn-sm btn-outline-secondary">Login</a>
+    <main style="flex: 1; background: var(--color-bg-primary); min-height: 100vh;">
+        <div class="top-row px-4" style="background: white; border-bottom: 1px solid var(--color-border); height: 64px; display: flex; align-items: center; justify-content: flex-end;">
+            <div style="display: flex; align-items: center; gap: 16px;">
+                @if (isAuthenticated)
+                {
+                    <span class="small-text" style="color: var(--color-text-secondary);">
+                        @userRole
+                    </span>
+                    <button class="btn btn-outline" @onclick="HandleLogout" style="min-height: 40px;">
+                        <i class="bi bi-box-arrow-right" style="margin-right: 8px;"></i>
+                        Logout
+                    </button>
+                }
+                else
+                {
+                    <a href="/login" class="btn btn-outline" style="min-height: 40px;">
+                        <i class="bi bi-box-arrow-in-right" style="margin-right: 8px;"></i>
+                        Login
+                    </a>
+                }
             </div>
         </div>
 
-        <article class="content px-4">
+        <article class="content px-4" style="padding: 32px;">
             @Body
         </article>
     </main>
 </div>
+
+@code {
+    private bool isAuthenticated = false;
+    private string? userRole;
+
+    protected override async Task OnInitializedAsync()
+    {
+        isAuthenticated = await AuthService.IsAuthenticatedAsync();
+        if (isAuthenticated)
+        {
+            userRole = await AuthService.GetUserRoleAsync();
+        }
+    }
+
+    private async Task HandleLogout()
+    {
+        await AuthService.LogoutAsync();
+        Navigation.NavigateTo("/login", forceLoad: true);
+    }
+}

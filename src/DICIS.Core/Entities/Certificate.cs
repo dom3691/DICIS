@@ -16,7 +16,7 @@ public class Certificate
     public string CertificateId { get; set; } = string.Empty; // Unique certificate ID
     
     [Required]
-    [StringLength(500)]
+    [StringLength(5000)]
     public string QRCodeData { get; set; } = string.Empty;
     
     [Required]

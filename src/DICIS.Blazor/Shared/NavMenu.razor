@@ -1,59 +1,60 @@
-<div class="top-row ps-3 navbar navbar-dark">
-    <div class="container-fluid">
-        <a class="navbar-brand" href="">DICIS</a>
-        <button title="Navigation menu" class="navbar-toggler" @onclick="ToggleNavMenu">
-            <span class="navbar-toggler-icon"></span>
-        </button>
+<div style="padding: 24px; border-bottom: 1px solid rgba(255,255,255,0.1);">
+    <h2 style="color: white; margin: 0; font-size: 24px;">
+        <i class="bi bi-shield-check" style="margin-right: 8px;"></i>
+        DICIS
+    </h2>
+    <p class="caption" style="color: rgba(255,255,255,0.7); margin: 8px 0 0 0;">
+        Digital Certificate System
+    </p>
+</div>
+
+<nav style="padding: 16px 0;">
+    <div style="padding: 8px 24px;">
+        <NavLink class="nav-link" href="" Match="NavLinkMatch.All" style="color: rgba(255,255,255,0.8); text-decoration: none; padding: 12px 16px; border-radius: var(--radius-md); display: flex; align-items: center; margin-bottom: 4px;">
+            <i class="bi bi-house" style="margin-right: 12px; width: 20px;"></i>
+            <span>Home</span>
+        </NavLink>
     </div>
-</div>
+    <div style="padding: 8px 24px;">
+        <NavLink class="nav-link" href="apply" style="color: rgba(255,255,255,0.8); text-decoration: none; padding: 12px 16px; border-radius: var(--radius-md); display: flex; align-items: center; margin-bottom: 4px;">
+            <i class="bi bi-file-earmark-text" style="margin-right: 12px; width: 20px;"></i>
+            <span>Apply</span>
+        </NavLink>
+    </div>
+    <div style="padding: 8px 24px;">
+        <NavLink class="nav-link" href="applications" style="color: rgba(255,255,255,0.8); text-decoration: none; padding: 12px 16px; border-radius: var(--radius-md); display: flex; align-items: center; margin-bottom: 4px;">
+            <i class="bi bi-list-ul" style="margin-right: 12px; width: 20px;"></i>
+            <span>My Applications</span>
+        </NavLink>
+    </div>
+    <div style="padding: 8px 24px;">
+        <NavLink class="nav-link" href="verify" style="color: rgba(255,255,255,0.8); text-decoration: none; padding: 12px 16px; border-radius: var(--radius-md); display: flex; align-items: center; margin-bottom: 4px;">
+            <i class="bi bi-check-circle" style="margin-right: 12px; width: 20px;"></i>
+            <span>Verify Certificate</span>
+        </NavLink>
+    </div>
+    <div style="padding: 8px 24px;">
+        <NavLink class="nav-link" href="admin" style="color: rgba(255,255,255,0.8); text-decoration: none; padding: 12px 16px; border-radius: var(--radius-md); display: flex; align-items: center; margin-bottom: 4px;">
+            <i class="bi bi-gear" style="margin-right: 12px; width: 20px;"></i>
+            <span>Admin</span>
+        </NavLink>
+    </div>
+    <div style="padding: 8px 24px;">
+        <NavLink class="nav-link" href="admin/exceptions" style="color: rgba(255,255,255,0.8); text-decoration: none; padding: 12px 16px; border-radius: var(--radius-md); display: flex; align-items: center; margin-bottom: 4px;">
+            <i class="bi bi-exclamation-triangle" style="margin-right: 12px; width: 20px;"></i>
+            <span>Exception Review</span>
+        </NavLink>
+    </div>
+</nav>
 
-<div class="@NavMenuCssClass nav-scrollable" @onclick="CollapseNavMenu">
-    <nav class="flex-column">
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="" Match="NavLinkMatch.All">
-                <i class="bi bi-house"></i> Home
-            </NavLink>
-        </div>
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="apply">
-                <i class="bi bi-file-earmark-text"></i> Apply
-            </NavLink>
-        </div>
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="applications">
-                <i class="bi bi-list-ul"></i> My Applications
-            </NavLink>
-        </div>
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="verify">
-                <i class="bi bi-check-circle"></i> Verify Certificate
-            </NavLink>
-        </div>
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="admin">
-                <i class="bi bi-gear"></i> Admin
-            </NavLink>
-        </div>
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="admin/exceptions">
-                <i class="bi bi-exclamation-triangle"></i> Exception Review
-            </NavLink>
-        </div>
-    </nav>
-</div>
-
-@code {
-    private bool collapseNavMenu = true;
-
-    private string? NavMenuCssClass => collapseNavMenu ? "collapse" : null;
-
-    private void ToggleNavMenu()
-    {
-        collapseNavMenu = !collapseNavMenu;
+<style>
+    .nav-link.active {
+        background-color: rgba(255, 255, 255, 0.15) !important;
+        color: white !important;
     }
-
-    private void CollapseNavMenu()
-    {
-        collapseNavMenu = true;
+    
+    .nav-link:hover {
+        background-color: rgba(255, 255, 255, 0.1);
+        color: white !important;
     }
-}
+</style>

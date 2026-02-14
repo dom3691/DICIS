@@ -32,6 +32,7 @@ public class AuthService
             if (result?.IsValid == true && !string.IsNullOrEmpty(result.Token))
             {
                 await _localStorage.SetItemAsync("authToken", result.Token);
+                await _localStorage.SetItemAsync("userRole", result.Role?.ToString() ?? "User");
                 _httpClient.DefaultRequestHeaders.Authorization = 
                     new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", result.Token);
             }
@@ -41,21 +42,64 @@ public class AuthService
         return new OTPVerifyResponse { IsValid = false, Message = "Invalid OTP" };
     }
 
+    public async Task<AdminLoginResponse> AdminLoginAsync(string username, string password)
+    {
+        var response = await _httpClient.PostAsJsonAsync("api/auth/admin/login", 
+            new AdminLoginRequest { Username = username, Password = password });
+        
+        if (response.IsSuccessStatusCode)
+        {
+            var result = await response.Content.ReadFromJsonAsync<AdminLoginResponse>();
+            if (result?.IsValid == true && !string.IsNullOrEmpty(result.Token))
+            {
+                await _localStorage.SetItemAsync("authToken", result.Token);
+                await _localStorage.SetItemAsync("userRole", result.AdminUser?.Role.ToString() ?? "User");
+                _httpClient.DefaultRequestHeaders.Authorization = 
+                    new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", result.Token);
+            }
+            return result ?? new AdminLoginResponse();
+        }
+        
+        return new AdminLoginResponse { IsValid = false, Message = "Invalid credentials" };
+    }
+
     public async Task<bool> IsAuthenticatedAsync()
     {
         var token = await _localStorage.GetItemAsync<string>("authToken");
-        if (!string.IsNullOrEmpty(token))
-        {
-            _httpClient.DefaultRequestHeaders.Authorization = 
-                new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
-            return true;
-        }
-        return false;
+        return !string.IsNullOrEmpty(token);
+    }
+
+    public async Task<string?> GetUserRoleAsync()
+    {
+        return await _localStorage.GetItemAsync<string>("userRole");
+    }
+
+    public async Task<bool> IsSuperAdminAsync()
+    {
+        var role = await GetUserRoleAsync();
+        return role == "SuperAdmin";
     }
 
     public async Task LogoutAsync()
     {
-        await _localStorage.RemoveItemAsync("authToken");
-        _httpClient.DefaultRequestHeaders.Authorization = null;
+        try
+        {
+            var token = await _localStorage.GetItemAsync<string>("authToken");
+            if (!string.IsNullOrEmpty(token))
+            {
+                _httpClient.DefaultRequestHeaders.Authorization = null;
+                await _httpClient.PostAsync("api/auth/logout", null);
+            }
+        }
+        catch
+        {
+            // Ignore errors during logout
+        }
+        finally
+        {
+            await _localStorage.RemoveItemAsync("authToken");
+            await _localStorage.RemoveItemAsync("userRole");
+            _httpClient.DefaultRequestHeaders.Authorization = null;
+        }
     }
 }

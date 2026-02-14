@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace DICIS.Core.Entities;
 
@@ -19,8 +20,9 @@ public class AdminUser
     [StringLength(255)]
     public string PasswordHash { get; set; } = string.Empty;
     
-    [StringLength(50)]
-    public string Role { get; set; } = "Admin"; // Admin, StateAdmin, LGAAdmin
+    [Required]
+    [Column(TypeName = "nvarchar(50)")]
+    public Role Role { get; set; } = Role.User;
     
     [StringLength(50)]
     public string? State { get; set; } // For state-specific admins

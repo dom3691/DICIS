@@ -35,6 +35,15 @@ public class DicisDbContext : DbContext
             .HasConversion<string>()
             .HasMaxLength(50);
         
+        // Configure decimal properties with precision and scale
+        modelBuilder.Entity<Application>()
+            .Property(a => a.ConfidenceScore)
+            .HasPrecision(5, 2); // e.g., 99.99
+        
+        modelBuilder.Entity<Application>()
+            .Property(a => a.RiskScore)
+            .HasPrecision(5, 2); // e.g., 99.99
+        
         // Application constraints - unique index for approved applications only
         modelBuilder.Entity<Application>()
             .HasIndex(a => new { a.UserId, a.State })
@@ -47,6 +56,11 @@ public class DicisDbContext : DbContext
             .HasConversion<string>()
             .HasMaxLength(50);
         
+        // Configure QRCodeData to allow larger base64 strings
+        modelBuilder.Entity<Certificate>()
+            .Property(c => c.QRCodeData)
+            .HasMaxLength(5000);
+        
         // Certificate constraints
         modelBuilder.Entity<Certificate>()
             .HasIndex(c => c.CertificateId)
@@ -55,6 +69,12 @@ public class DicisDbContext : DbContext
         // Configure FraudReportStatus enum to be stored as string
         modelBuilder.Entity<FraudReport>()
             .Property(f => f.Status)
+            .HasConversion<string>()
+            .HasMaxLength(50);
+        
+        // Configure Role enum to be stored as string
+        modelBuilder.Entity<AdminUser>()
+            .Property(a => a.Role)
             .HasConversion<string>()
             .HasMaxLength(50);
         

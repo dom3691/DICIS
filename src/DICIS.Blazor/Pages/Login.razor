@@ -4,48 +4,151 @@
 
 <PageTitle>Login - DICIS</PageTitle>
 
-<div class="container mt-5">
-    <div class="row justify-content-center">
-        <div class="col-md-6">
-            <div class="card">
-                <div class="card-header">
-                    <h3>Login with NIN</h3>
+<div style="min-height: 100vh; display: flex; align-items: center; background: var(--color-bg-primary);">
+    <div class="container">
+        <div class="row align-items-center">
+            <!-- Left Side - Illustration -->
+            <div class="col-md-6 d-none d-md-block">
+                <div style="text-align: center; padding: 40px;">
+                    <div style="font-size: 200px; color: var(--color-primary); opacity: 0.1; margin-bottom: 24px;">
+                        <i class="bi bi-shield-lock"></i>
+                    </div>
+                    <h2 style="color: var(--color-text-primary); margin-bottom: 16px;">Secure Authentication</h2>
+                    <p class="small-text" style="color: var(--color-text-secondary);">
+                        Your identity is verified through NIMC and protected with industry-standard security.
+                    </p>
                 </div>
-                <div class="card-body">
-                    @if (!string.IsNullOrEmpty(errorMessage))
-                    {
-                        <div class="alert alert-danger">@errorMessage</div>
-                    }
-                    
-                    @if (showOTP)
-                    {
-                        <div class="mb-3">
-                            <label class="form-label">Enter OTP</label>
-                            <input type="text" class="form-control" @bind="otp" placeholder="6-digit OTP" maxlength="6" />
-                            <small class="form-text text-muted">OTP sent to your registered phone/email</small>
-                        </div>
-                        <button class="btn btn-primary w-100" @onclick="VerifyOTP" disabled="@isLoading">
-                            @if (isLoading)
+            </div>
+
+            <!-- Right Side - Login Form -->
+            <div class="col-md-6">
+                <div class="card" style="max-width: 500px; margin: 0 auto; border: none; box-shadow: var(--shadow-lg);">
+                    <div class="card-header" style="background: white; border-bottom: 2px solid var(--color-primary);">
+                        <h2 style="margin: 0; color: var(--color-primary);">
+                            <i class="bi bi-person-circle" style="margin-right: 8px;"></i>
+                            @if (isAdminLogin)
                             {
-                                <span class="spinner-border spinner-border-sm me-2"></span>
+                                <span>Admin Login</span>
                             }
-                            Verify OTP
-                        </button>
-                    }
-                    else
-                    {
-                        <div class="mb-3">
-                            <label class="form-label">NIN (11 digits)</label>
-                            <input type="text" class="form-control" @bind="nin" placeholder="Enter your NIN" maxlength="11" />
-                        </div>
-                        <button class="btn btn-primary w-100" @onclick="VerifyNIN" disabled="@isLoading">
-                            @if (isLoading)
+                            else
                             {
-                                <span class="spinner-border spinner-border-sm me-2"></span>
+                                <span>Login with NIN</span>
                             }
-                            Verify NIN
-                        </button>
-                    }
+                        </h2>
+                    </div>
+                    <div class="card-body" style="padding: 32px;">
+                        <div style="margin-bottom: 16px; display: flex; gap: 8px;">
+                            <button class="btn @(!isAdminLogin ? "btn-primary" : "btn-outline")" 
+                                    @onclick="() => { isAdminLogin = false; ClearForm(); }" 
+                                    style="flex: 1;">
+                                Citizen Login
+                            </button>
+                            <button class="btn @(isAdminLogin ? "btn-primary" : "btn-outline")" 
+                                    @onclick="() => { isAdminLogin = true; ClearForm(); }" 
+                                    style="flex: 1;">
+                                Admin Login
+                            </button>
+                        </div>
+
+                        @if (!string.IsNullOrEmpty(errorMessage))
+                        {
+                            <div class="alert alert-danger">
+                                <i class="bi bi-exclamation-triangle-fill" style="margin-right: 8px;"></i>
+                                @errorMessage
+                            </div>
+                        }
+                        
+                        @if (isAdminLogin)
+                        {
+                            <!-- Admin Login Form -->
+                            <div style="margin-bottom: 24px;">
+                                <label class="form-label">
+                                    <i class="bi bi-person" style="margin-right: 8px;"></i>
+                                    Username
+                                </label>
+                                <input type="text" 
+                                       class="form-control" 
+                                       @bind="adminUsername" 
+                                       placeholder="Enter username" />
+                            </div>
+                            <div style="margin-bottom: 24px;">
+                                <label class="form-label">
+                                    <i class="bi bi-lock" style="margin-right: 8px;"></i>
+                                    Password
+                                </label>
+                                <input type="password" 
+                                       class="form-control" 
+                                       @bind="adminPassword" 
+                                       placeholder="Enter password" />
+                            </div>
+                            <button class="btn btn-primary w-100" @onclick="AdminLogin" disabled="@isLoading">
+                                @if (isLoading)
+                                {
+                                    <span class="spinner-border spinner-border-sm me-2"></span>
+                                }
+                                <i class="bi bi-box-arrow-in-right" style="margin-right: 8px;"></i>
+                                Login
+                            </button>
+                        }
+                        else if (showOTP)
+                        {
+                            <!-- OTP Verification -->
+                            <div style="margin-bottom: 24px;">
+                                <label class="form-label">Enter OTP</label>
+                                <input type="text" 
+                                       class="form-control" 
+                                       @bind="otp" 
+                                       placeholder="000000" 
+                                       maxlength="6" 
+                                       style="text-align: center; font-size: 24px; letter-spacing: 8px; font-weight: 600;" />
+                                <small class="form-text">
+                                    <i class="bi bi-info-circle" style="margin-right: 4px;"></i>
+                                    OTP sent to your registered phone/email
+                                </small>
+                            </div>
+                            <button class="btn btn-primary w-100" @onclick="VerifyOTP" disabled="@isLoading">
+                                @if (isLoading)
+                                {
+                                    <span class="spinner-border spinner-border-sm me-2"></span>
+                                }
+                                <i class="bi bi-shield-check" style="margin-right: 8px;"></i>
+                                Verify OTP
+                            </button>
+                            <div style="text-align: center; margin-top: 16px;">
+                                <a href="#" @onclick="GoBackToNIN" @onclick:preventDefault style="color: var(--color-primary); text-decoration: none; font-size: 14px;">
+                                    <i class="bi bi-arrow-left" style="margin-right: 4px;"></i>
+                                    Back to NIN Entry
+                                </a>
+                            </div>
+                        }
+                        else
+                        {
+                            <!-- Citizen NIN Login -->
+                            <div style="margin-bottom: 24px;">
+                                <label class="form-label">
+                                    <i class="bi bi-credit-card-2-front" style="margin-right: 8px;"></i>
+                                    NIN (11 digits)
+                                </label>
+                                <input type="text" 
+                                       class="form-control" 
+                                       @bind="nin" 
+                                       placeholder="Enter your 11-digit NIN" 
+                                       maxlength="11" 
+                                       style="font-size: 18px;" />
+                                <small class="form-text">
+                                    Your National Identification Number
+                                </small>
+                            </div>
+                            <button class="btn btn-primary w-100" @onclick="VerifyNIN" disabled="@isLoading">
+                                @if (isLoading)
+                                {
+                                    <span class="spinner-border spinner-border-sm me-2"></span>
+                                }
+                                <i class="bi bi-send" style="margin-right: 8px;"></i>
+                                Send OTP
+                            </button>
+                        }
+                    </div>
                 </div>
             </div>
         </div>
@@ -55,9 +158,22 @@
 @code {
     private string nin = string.Empty;
     private string otp = string.Empty;
+    private string adminUsername = string.Empty;
+    private string adminPassword = string.Empty;
     private bool showOTP = false;
+    private bool isAdminLogin = false;
     private bool isLoading = false;
     private string errorMessage = string.Empty;
+
+    private void ClearForm()
+    {
+        nin = string.Empty;
+        otp = string.Empty;
+        adminUsername = string.Empty;
+        adminPassword = string.Empty;
+        showOTP = false;
+        errorMessage = string.Empty;
+    }
 
     private async Task VerifyNIN()
     {
@@ -76,9 +192,17 @@
             if (response.IsValid)
             {
                 showOTP = true;
-                // In production, OTP would be sent via SMS/Email
-                // For demo, show it in console
-                Console.WriteLine($"OTP for {nin}: Check console for demo OTP");
+                // Extract OTP from message if available
+                if (response.Message != null && response.Message.Contains("Dev:"))
+                {
+                    var otpStart = response.Message.IndexOf("Dev:") + 5;
+                    var otpEnd = response.Message.IndexOf(")", otpStart);
+                    if (otpEnd > otpStart)
+                    {
+                        var devOtp = response.Message.Substring(otpStart, otpEnd - otpStart).Trim();
+                        errorMessage = $"OTP sent! (Development mode - OTP: {devOtp})";
+                    }
+                }
             }
             else
             {
@@ -126,5 +250,44 @@
         {
             isLoading = false;
         }
+    }
+
+    private async Task AdminLogin()
+    {
+        if (string.IsNullOrEmpty(adminUsername) || string.IsNullOrEmpty(adminPassword))
+        {
+            errorMessage = "Username and password are required";
+            return;
+        }
+
+        isLoading = true;
+        errorMessage = string.Empty;
+
+        try
+        {
+            var response = await AuthService.AdminLoginAsync(adminUsername, adminPassword);
+            if (response.IsValid)
+            {
+                Navigation.NavigateTo("/admin");
+            }
+            else
+            {
+                errorMessage = response.Message ?? "Invalid credentials";
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error: {ex.Message}";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private void GoBackToNIN()
+    {
+        showOTP = false;
+        errorMessage = string.Empty;
     }
 }

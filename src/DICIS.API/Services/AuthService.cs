@@ -3,6 +3,10 @@ using DICIS.Core.DTOs;
 using DICIS.Core.Entities;
 using DICIS.Core.Services;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
+using Microsoft.IdentityModel.Tokens;
+using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
 
@@ -12,7 +16,8 @@ public class AuthService : IAuthService
 {
     private readonly DicisDbContext _context;
     private readonly IConfiguration _configuration;
-    private readonly Dictionary<string, (string otp, DateTime expiresAt)> _otpStore = new();
+    private static readonly Dictionary<string, (string otp, DateTime expiresAt)> _otpStore = new();
+    private static readonly object _otpLock = new object();
 
     public AuthService(DicisDbContext context, IConfiguration configuration)
     {
@@ -22,114 +27,129 @@ public class AuthService : IAuthService
 
     public async Task<NINVerifyResponse> VerifyNINAsync(string nin)
     {
-        // In production, this would call NIMC API
-        // For now, simulate NIMC verification
-        var response = new NINVerifyResponse();
-        
-        // Simulate NIMC API call
-        if (nin.Length == 11 && nin.All(char.IsDigit))
+        // Mock NIN verification - in production, integrate with NIMC API
+        // For now, accept any 11-digit NIN
+        if (string.IsNullOrEmpty(nin) || nin.Length != 11 || !nin.All(char.IsDigit))
         {
-            response.IsValid = true;
-            response.PhoneNumber = "08012345678"; // Mock data
-            response.Email = $"user{nin}@example.com"; // Mock data
-            response.FirstName = "John"; // Mock data
-            response.LastName = "Doe"; // Mock data
-            response.Message = "NIN verified successfully";
+            return new NINVerifyResponse
+            {
+                IsValid = false,
+                Message = "Invalid NIN format"
+            };
         }
-        else
+
+        // Mock data - in production, fetch from NIMC
+        return new NINVerifyResponse
         {
-            response.IsValid = false;
-            response.Message = "Invalid NIN format";
-        }
-        
-        return response;
+            IsValid = true,
+            FirstName = "John",
+            LastName = "Doe",
+            MiddleName = "Middle",
+            Email = $"user{nin}@example.com",
+            PhoneNumber = "08012345678",
+            DateOfBirth = DateTime.UtcNow.AddYears(-25),
+            Gender = "M"
+        };
     }
 
     public async Task<string> GenerateOTPAsync(string nin, string phoneNumber, string email)
     {
         var otp = new Random().Next(100000, 999999).ToString();
         var expiresAt = DateTime.UtcNow.AddMinutes(5);
-        
-        _otpStore[nin] = (otp, expiresAt);
-        
-        // In production, send OTP via SMS/Email
-        // For now, log it (in production, use SMS/Email service)
+
+        lock (_otpLock)
+        {
+            _otpStore[nin] = (otp, expiresAt);
+        }
+
         Console.WriteLine($"OTP for NIN {nin}: {otp}");
-        
         return otp;
     }
 
     public async Task<OTPVerifyResponse> VerifyOTPAsync(string nin, string otp)
     {
-        var response = new OTPVerifyResponse();
-        
-        if (!_otpStore.ContainsKey(nin))
+        try
         {
-            response.IsValid = false;
-            response.Message = "OTP not found or expired";
-            return response;
-        }
-        
-        var (storedOtp, expiresAt) = _otpStore[nin];
-        
-        if (DateTime.UtcNow > expiresAt)
-        {
-            _otpStore.Remove(nin);
-            response.IsValid = false;
-            response.Message = "OTP expired";
-            return response;
-        }
-        
-        if (storedOtp != otp)
-        {
-            response.IsValid = false;
-            response.Message = "Invalid OTP";
-            return response;
-        }
-        
-        // OTP is valid
-        _otpStore.Remove(nin);
-        
-        // Get or create user
-        var user = await _context.Users.FirstOrDefaultAsync(u => u.NIN == nin);
-        
-        if (user == null)
-        {
-            // Create new user (in production, get from NIMC API)
-            var ninData = await VerifyNINAsync(nin);
-            user = new User
+            var response = new OTPVerifyResponse();
+            (string storedOtp, DateTime expiresAt) otpData;
+
+            lock (_otpLock)
             {
-                NIN = nin,
-                FirstName = ninData.FirstName ?? "Unknown",
-                LastName = ninData.LastName ?? "Unknown",
-                Email = ninData.Email ?? $"{nin}@example.com",
-                PhoneNumber = ninData.PhoneNumber ?? "00000000000",
-                DateOfBirth = DateTime.UtcNow.AddYears(-25), // Mock
-                Gender = "M",
-                CreatedAt = DateTime.UtcNow
-            };
-            _context.Users.Add(user);
+                if (!_otpStore.TryGetValue(nin, out otpData))
+                {
+                    response.IsValid = false;
+                    response.Message = "OTP not found or expired";
+                    return response;
+                }
+            }
+
+            if (DateTime.UtcNow > otpData.expiresAt)
+            {
+                lock (_otpLock)
+                {
+                    _otpStore.Remove(nin);
+                }
+                response.IsValid = false;
+                response.Message = "OTP expired";
+                return response;
+            }
+
+            if (otpData.storedOtp != otp)
+            {
+                response.IsValid = false;
+                response.Message = "Invalid OTP";
+                return response;
+            }
+
+            lock (_otpLock)
+            {
+                _otpStore.Remove(nin);
+            }
+
+            var user = await _context.Users.FirstOrDefaultAsync(u => u.NIN == nin);
+
+            if (user == null)
+            {
+                var ninData = await VerifyNINAsync(nin);
+                user = new User
+                {
+                    NIN = nin,
+                    FirstName = ninData.FirstName ?? "Unknown",
+                    LastName = ninData.LastName ?? "Unknown",
+                    MiddleName = ninData.MiddleName,
+                    Email = ninData.Email ?? $"{nin}@example.com",
+                    PhoneNumber = ninData.PhoneNumber ?? "00000000000",
+                    DateOfBirth = DateTime.UtcNow.AddYears(-25), // Mock
+                    Gender = "M",
+                    CreatedAt = DateTime.UtcNow
+                };
+                _context.Users.Add(user);
+                await _context.SaveChangesAsync();
+            }
+
+            user.LastLoginAt = DateTime.UtcNow;
             await _context.SaveChangesAsync();
+
+            response.Token = GenerateJwtToken(user, Role.User);
+            response.IsValid = true;
+            response.Role = Role.User;
+            response.User = new UserDTO
+            {
+                Id = user.Id,
+                NIN = user.NIN,
+                FirstName = user.FirstName,
+                LastName = user.LastName,
+                MiddleName = user.MiddleName,
+                Email = user.Email,
+                PhoneNumber = user.PhoneNumber
+            };
+
+            return response;
         }
-        
-        user.LastLoginAt = DateTime.UtcNow;
-        await _context.SaveChangesAsync();
-        
-        // Generate JWT token
-        response.Token = GenerateJwtToken(user);
-        response.IsValid = true;
-        response.User = new UserDTO
+        catch (Exception)
         {
-            Id = user.Id,
-            NIN = user.NIN,
-            FirstName = user.FirstName,
-            LastName = user.LastName,
-            MiddleName = user.MiddleName,
-            Email = user.Email,
-            PhoneNumber = user.PhoneNumber
-        };
-        
-        return response;
+            throw;
+        }
     }
 
     public async Task<bool> IsNINRegisteredAsync(string nin)
@@ -137,12 +157,131 @@ public class AuthService : IAuthService
         return await _context.Users.AnyAsync(u => u.NIN == nin);
     }
 
-    private string GenerateJwtToken(User user)
+    public async Task<AdminLoginResponse> AdminLoginAsync(string username, string password)
     {
-        // Simplified JWT generation (in production, use proper JWT library)
-        var secret = _configuration["Jwt:Secret"] ?? "your-secret-key-change-in-production";
-        var payload = $"{{\"sub\":\"{user.Id}\",\"nin\":\"{user.NIN}\",\"exp\":{DateTimeOffset.UtcNow.AddHours(24).ToUnixTimeSeconds()}}}";
-        var token = Convert.ToBase64String(Encoding.UTF8.GetBytes(payload));
-        return token;
+        var admin = await _context.AdminUsers
+            .FirstOrDefaultAsync(a => a.Username == username && a.IsActive);
+
+        if (admin == null)
+        {
+            return new AdminLoginResponse
+            {
+                IsValid = false,
+                Message = "Invalid username or password"
+            };
+        }
+
+        // Verify password
+        if (!VerifyPassword(password, admin.PasswordHash))
+        {
+            return new AdminLoginResponse
+            {
+                IsValid = false,
+                Message = "Invalid username or password"
+            };
+        }
+
+        // Update last login
+        admin.LastLoginAt = DateTime.UtcNow;
+        await _context.SaveChangesAsync();
+
+        // Generate token
+        var token = GenerateJwtToken(admin);
+
+        return new AdminLoginResponse
+        {
+            IsValid = true,
+            Token = token,
+            AdminUser = new AdminUserDTO
+            {
+                Id = admin.Id,
+                Username = admin.Username,
+                Email = admin.Email,
+                Role = admin.Role,
+                State = admin.State,
+                LGA = admin.LGA
+            }
+        };
+    }
+
+    public async Task<bool> LogoutAsync(string token)
+    {
+        // In a production system, you might want to blacklist the token
+        // For now, we'll just return true as token invalidation is handled client-side
+        return await Task.FromResult(true);
+    }
+
+    private string GenerateJwtToken(User user, Role role)
+    {
+        var secret = _configuration["Jwt:Secret"] ?? "your-secret-key-change-in-production-min-32-chars-long-for-security";
+        var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secret));
+        var credentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
+
+        var claims = new[]
+        {
+            new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
+            new Claim("nin", user.NIN),
+            new Claim(ClaimTypes.Name, $"{user.FirstName} {user.LastName}"),
+            new Claim(ClaimTypes.Email, user.Email ?? ""),
+            new Claim(ClaimTypes.Role, role.ToString())
+        };
+
+        var token = new JwtSecurityToken(
+            issuer: null,
+            audience: null,
+            claims: claims,
+            expires: DateTime.UtcNow.AddHours(24),
+            signingCredentials: credentials
+        );
+
+        return new JwtSecurityTokenHandler().WriteToken(token);
+    }
+
+    private string GenerateJwtToken(AdminUser admin)
+    {
+        var secret = _configuration["Jwt:Secret"] ?? "your-secret-key-change-in-production-min-32-chars-long-for-security";
+        var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secret));
+        var credentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
+
+        var claims = new List<Claim>
+        {
+            new Claim(ClaimTypes.NameIdentifier, admin.Id.ToString()),
+            new Claim(ClaimTypes.Name, admin.Username),
+            new Claim(ClaimTypes.Email, admin.Email),
+            new Claim(ClaimTypes.Role, admin.Role.ToString())
+        };
+
+        if (!string.IsNullOrEmpty(admin.State))
+        {
+            claims.Add(new Claim("State", admin.State));
+        }
+
+        if (!string.IsNullOrEmpty(admin.LGA))
+        {
+            claims.Add(new Claim("LGA", admin.LGA));
+        }
+
+        var token = new JwtSecurityToken(
+            issuer: null,
+            audience: null,
+            claims: claims,
+            expires: DateTime.UtcNow.AddHours(24),
+            signingCredentials: credentials
+        );
+
+        return new JwtSecurityTokenHandler().WriteToken(token);
+    }
+
+    public static string HashPassword(string password)
+    {
+        using var sha256 = SHA256.Create();
+        var hashedBytes = sha256.ComputeHash(Encoding.UTF8.GetBytes(password));
+        return Convert.ToBase64String(hashedBytes);
+    }
+
+    private bool VerifyPassword(string password, string passwordHash)
+    {
+        var hashedPassword = HashPassword(password);
+        return hashedPassword == passwordHash;
     }
 }

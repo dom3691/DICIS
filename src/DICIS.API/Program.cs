@@ -16,7 +16,8 @@ builder.Services.AddSwaggerGen();
 // Database
 builder.Services.AddDbContext<DicisDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection") 
-        ?? "Server=(localdb)\\mssqllocaldb;Database=DICIS;Trusted_Connection=True;MultipleActiveResultSets=true"));
+        ?? "Server=.;Database=DICIS;Trusted_Connection=True;MultipleActiveResultSets=true;TrustServerCertificate=True",
+        b => b.MigrationsAssembly("DICIS.API")));
 
 // CORS
 builder.Services.AddCors(options =>
@@ -45,7 +46,11 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
         };
     });
 
-builder.Services.AddAuthorization();
+builder.Services.AddAuthorization(options =>
+{
+    options.AddPolicy("SuperAdminOnly", policy => policy.RequireRole("SuperAdmin"));
+    options.AddPolicy("AdminOrSuperAdmin", policy => policy.RequireRole("SuperAdmin", "User"));
+});
 
 // Register services
 builder.Services.AddScoped<IAuthService, AuthService>();
@@ -55,24 +60,24 @@ builder.Services.AddScoped<IAuditService, AuditService>();
 
 var app = builder.Build();
 
+// Seed database
+using (var scope = app.Services.CreateScope())
+{
+    var context = scope.ServiceProvider.GetRequiredService<DicisDbContext>();
+    await DICIS.API.Data.DatabaseSeeder.SeedAsync(context);
+}
+
 // Configure the HTTP request pipeline
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
     app.UseSwaggerUI();
 }
-
+else
 app.UseHttpsRedirection();
 app.UseCors("AllowBlazor");
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
-
-// Ensure database is created
-using (var scope = app.Services.CreateScope())
-{
-    var db = scope.ServiceProvider.GetRequiredService<DicisDbContext>();
-    db.Database.EnsureCreated();
-}
 
 app.Run();
