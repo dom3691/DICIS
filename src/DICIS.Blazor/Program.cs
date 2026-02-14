@@ -18,5 +18,8 @@ builder.Services.AddScoped(sp =>
 builder.Services.AddBlazoredLocalStorage();
 builder.Services.AddScoped<AuthService>();
 builder.Services.AddScoped<ApplicationService>();
+builder.Services.AddScoped<ProfileService>();
+builder.Services.AddScoped<ServiceRequestService>();
+builder.Services.AddScoped<LocationService>();
 
 await builder.Build().RunAsync();

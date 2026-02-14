@@ -1,0 +1,282 @@
+@page "/profile"
+@page "/profile/create"
+@inject ProfileService ProfileService
+@inject LocationService LocationService
+@inject AuthService AuthService
+@inject NavigationManager Navigation
+
+<PageTitle>Create Profile - DICIS</PageTitle>
+
+<div class="container" style="max-width: 800px;">
+    <div style="margin-bottom: 32px;">
+        <h1 style="margin-bottom: 8px;">Create Your Profile</h1>
+        <p class="small-text" style="color: var(--color-text-secondary);">
+            Complete your profile to access all services. All fields marked with * are required.
+        </p>
+    </div>
+
+    <div class="card" style="border: none; box-shadow: var(--shadow-md);">
+        <div class="card-body" style="padding: 40px;">
+            @if (!string.IsNullOrEmpty(successMessage))
+            {
+                <div class="alert alert-success">
+                    <i class="bi bi-check-circle-fill" style="margin-right: 8px;"></i>
+                    @successMessage
+                </div>
+            }
+            
+            @if (!string.IsNullOrEmpty(errorMessage))
+            {
+                <div class="alert alert-danger">
+                    <i class="bi bi-exclamation-triangle-fill" style="margin-right: 8px;"></i>
+                    @errorMessage
+                </div>
+            }
+
+            <EditForm Model="@profileRequest" OnValidSubmit="HandleSubmit">
+                <DataAnnotationsValidator />
+                
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">First Name *</label>
+                        <InputText class="form-control" @bind-Value="profileRequest.FirstName" />
+                        <ValidationMessage For="@(() => profileRequest.FirstName)" />
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Last Name *</label>
+                        <InputText class="form-control" @bind-Value="profileRequest.LastName" />
+                        <ValidationMessage For="@(() => profileRequest.LastName)" />
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">Middle Name</label>
+                    <InputText class="form-control" @bind-Value="profileRequest.MiddleName" />
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">Country *</label>
+                    <InputSelect class="form-select" @bind-Value="selectedCountry" @bind-Value:after="OnCountryChanged">
+                        <option value="">Select Country</option>
+                        @foreach (var country in countries)
+                        {
+                            <option value="@country">@country</option>
+                        }
+                    </InputSelect>
+                    <ValidationMessage For="@(() => profileRequest.Country)" />
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">State/Province *</label>
+                    <InputSelect class="form-select" @bind-Value="selectedState" @bind-Value:after="OnStateChanged" disabled="@(string.IsNullOrEmpty(selectedCountry))">
+                        <option value="">Select State</option>
+                        @foreach (var state in states)
+                        {
+                            <option value="@state">@state</option>
+                        }
+                    </InputSelect>
+                    <ValidationMessage For="@(() => profileRequest.State)" />
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">Local Government Area *</label>
+                    <InputSelect class="form-select" @bind-Value="selectedLGA" disabled="@(string.IsNullOrEmpty(selectedState))">
+                        <option value="">Select LGA</option>
+                        @foreach (var lga in localGovernments)
+                        {
+                            <option value="@lga">@lga</option>
+                        }
+                    </InputSelect>
+                    <ValidationMessage For="@(() => profileRequest.LocalGovernment)" />
+                </div>
+
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Email Address *</label>
+                        <InputText type="email" class="form-control" @bind-Value="profileRequest.Email" />
+                        <ValidationMessage For="@(() => profileRequest.Email)" />
+                        <small class="form-text">A verification email will be sent to this address</small>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Phone Number *</label>
+                        <InputText class="form-control" @bind-Value="profileRequest.PhoneNumber" />
+                        <ValidationMessage For="@(() => profileRequest.PhoneNumber)" />
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Date of Birth *</label>
+                        <InputDate class="form-control" @bind-Value="profileRequest.DateOfBirth" />
+                        <ValidationMessage For="@(() => profileRequest.DateOfBirth)" />
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Gender *</label>
+                        <InputSelect class="form-select" @bind-Value="profileRequest.Gender">
+                            <option value="">Select Gender</option>
+                            <option value="Male">Male</option>
+                            <option value="Female">Female</option>
+                            <option value="Other">Other</option>
+                        </InputSelect>
+                        <ValidationMessage For="@(() => profileRequest.Gender)" />
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">Address</label>
+                    <InputTextArea class="form-control" @bind-Value="profileRequest.Address" rows="3" />
+                </div>
+
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">City</label>
+                        <InputText class="form-control" @bind-Value="profileRequest.City" />
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Postal Code</label>
+                        <InputText class="form-control" @bind-Value="profileRequest.PostalCode" />
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">National Identification Number (NIN)</label>
+                    <InputText class="form-control" @bind-Value="profileRequest.NIN" maxlength="11" />
+                    <small class="form-text">Optional - helps with verification</small>
+                </div>
+
+                <div style="display: flex; justify-content: flex-end; gap: 16px; margin-top: 32px;">
+                    <a href="/" class="btn btn-outline">Cancel</a>
+                    <button type="submit" class="btn btn-primary" disabled="@isLoading">
+                        @if (isLoading)
+                        {
+                            <span class="spinner-border spinner-border-sm me-2"></span>
+                        }
+                        <i class="bi bi-check-circle" style="margin-right: 8px;"></i>
+                        Create Profile
+                    </button>
+                </div>
+            </EditForm>
+        </div>
+    </div>
+</div>
+
+@code {
+    private CreateProfileRequest profileRequest = new();
+    private List<string> countries = new();
+    private List<string> states = new();
+    private List<string> localGovernments = new();
+    private string selectedCountry = string.Empty;
+    private string selectedState = string.Empty;
+    private string selectedLGA = string.Empty;
+    private bool isLoading = false;
+    private string errorMessage = string.Empty;
+    private string successMessage = string.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var isAuth = await AuthService.IsAuthenticatedAsync();
+        if (!isAuth)
+        {
+            Navigation.NavigateTo("/login");
+            return;
+        }
+
+        // Check if profile already exists
+        var existingProfile = await ProfileService.GetProfileAsync();
+        if (existingProfile != null)
+        {
+            Navigation.NavigateTo("/profile/view");
+            return;
+        }
+
+        await LoadCountries();
+    }
+
+    private async Task LoadCountries()
+    {
+        try
+        {
+            countries = await LocationService.GetCountriesAsync();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error loading countries: {ex.Message}";
+        }
+    }
+
+    private async Task OnCountryChanged()
+    {
+        profileRequest.Country = selectedCountry;
+        states.Clear();
+        localGovernments.Clear();
+        selectedState = string.Empty;
+        selectedLGA = string.Empty;
+
+        if (!string.IsNullOrEmpty(selectedCountry))
+        {
+            try
+            {
+                states = await LocationService.GetStatesAsync(selectedCountry);
+            }
+            catch (Exception ex)
+            {
+                errorMessage = $"Error loading states: {ex.Message}";
+            }
+        }
+    }
+
+    private async Task OnStateChanged()
+    {
+        profileRequest.State = selectedState;
+        localGovernments.Clear();
+        selectedLGA = string.Empty;
+
+        if (!string.IsNullOrEmpty(selectedCountry) && !string.IsNullOrEmpty(selectedState))
+        {
+            try
+            {
+                localGovernments = await LocationService.GetLocalGovernmentsAsync(selectedCountry, selectedState);
+            }
+            catch (Exception ex)
+            {
+                errorMessage = $"Error loading local governments: {ex.Message}";
+            }
+        }
+    }
+
+    private void OnLGAChanged()
+    {
+        profileRequest.LocalGovernment = selectedLGA;
+    }
+
+    private async Task HandleSubmit()
+    {
+        isLoading = true;
+        errorMessage = string.Empty;
+        successMessage = string.Empty;
+
+        try
+        {
+            profileRequest.Country = selectedCountry;
+            profileRequest.State = selectedState;
+            profileRequest.LocalGovernment = selectedLGA;
+
+            var profile = await ProfileService.CreateProfileAsync(profileRequest);
+            
+            if (profile != null)
+            {
+                successMessage = "Profile created successfully! Please check your email to verify your account.";
+                await Task.Delay(2000);
+                Navigation.NavigateTo("/profile/view");
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error: {ex.Message}";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+}

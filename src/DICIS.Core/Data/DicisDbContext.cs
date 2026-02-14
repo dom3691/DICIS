@@ -10,7 +10,9 @@ public class DicisDbContext : DbContext
     }
     
     public DbSet<User> Users { get; set; }
+    public DbSet<UserProfile> UserProfiles { get; set; }
     public DbSet<Application> Applications { get; set; }
+    public DbSet<ServiceRequest> ServiceRequests { get; set; }
     public DbSet<Certificate> Certificates { get; set; }
     public DbSet<AuditLog> AuditLogs { get; set; }
     public DbSet<AdminUser> AdminUsers { get; set; }
@@ -86,5 +88,50 @@ public class DicisDbContext : DbContext
         modelBuilder.Entity<AdminUser>()
             .HasIndex(a => a.Email)
             .IsUnique();
+        
+        // UserProfile constraints
+        modelBuilder.Entity<UserProfile>()
+            .HasIndex(u => u.UserId)
+            .IsUnique();
+        
+        modelBuilder.Entity<UserProfile>()
+            .HasIndex(u => u.Email)
+            .IsUnique();
+        
+        modelBuilder.Entity<UserProfile>()
+            .HasIndex(u => u.EmailVerificationToken)
+            .IsUnique()
+            .HasFilter("[EmailVerificationToken] IS NOT NULL");
+        
+        // Configure ServiceType enum to be stored as string
+        modelBuilder.Entity<ServiceRequest>()
+            .Property(s => s.ServiceType)
+            .HasConversion<string>()
+            .HasMaxLength(50);
+        
+        // Configure ServiceRequestStatus enum to be stored as string
+        modelBuilder.Entity<ServiceRequest>()
+            .Property(s => s.Status)
+            .HasConversion<string>()
+            .HasMaxLength(50);
+        
+        // Configure PaymentStatus enum to be stored as string
+        modelBuilder.Entity<ServiceRequest>()
+            .Property(s => s.PaymentStatus)
+            .HasConversion<string>()
+            .HasMaxLength(50);
+        
+        // ServiceRequest constraints
+        modelBuilder.Entity<ServiceRequest>()
+            .HasIndex(s => s.PaymentReference)
+            .IsUnique()
+            .HasFilter("[PaymentReference] IS NOT NULL");
+        
+        // Application relationship with ServiceRequest
+        modelBuilder.Entity<Application>()
+            .HasOne(a => a.ServiceRequest)
+            .WithOne(s => s.Application)
+            .HasForeignKey<Application>(a => a.ServiceRequestId)
+            .OnDelete(DeleteBehavior.SetNull);
     }
 }

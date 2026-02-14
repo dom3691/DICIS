@@ -1,7 +1,10 @@
+using DICIS.Core.Data;
 using DICIS.Core.DTOs;
 using DICIS.Core.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using System.Security.Claims;
 
 namespace DICIS.API.Controllers;
 
@@ -10,10 +13,12 @@ namespace DICIS.API.Controllers;
 public class CertificateController : ControllerBase
 {
     private readonly ICertificateService _certificateService;
+    private readonly DicisDbContext _context;
 
-    public CertificateController(ICertificateService certificateService)
+    public CertificateController(ICertificateService certificateService, DicisDbContext context)
     {
         _certificateService = certificateService;
+        _context = context;
     }
 
     [HttpPost("generate")]
@@ -62,6 +67,41 @@ public class CertificateController : ControllerBase
     [Authorize]
     public async Task<IActionResult> DownloadCertificate(string certificateId)
     {
+        var userId = GetUserId();
+        if (userId == null)
+        {
+            return Unauthorized();
+        }
+
+        var certificate = await _context.Certificates
+            .Include(c => c.Application)
+            .ThenInclude(a => a.ServiceRequest)
+            .FirstOrDefaultAsync(c => c.CertificateId == certificateId);
+
+        if (certificate == null)
+        {
+            return NotFound(new { message = "Certificate not found" });
+        }
+
+        // Check if user owns this certificate or is SuperAdmin
+        var userRole = User.FindFirst(ClaimTypes.Role)?.Value;
+        if (userRole != "SuperAdmin" && certificate.Application.UserId != userId.Value)
+        {
+            return Forbid();
+        }
+
+        // Check if payment was completed
+        if (certificate.Application.ServiceRequest != null && 
+            certificate.Application.ServiceRequest.PaymentStatus != Core.Entities.PaymentStatus.Completed)
+        {
+            return BadRequest(new { message = "Payment is required before downloading certificate" });
+        }
+
+        if (certificate.Status != Core.Entities.CertificateStatus.Active)
+        {
+            return BadRequest(new { message = "Certificate is not active" });
+        }
+
         try
         {
             var pdfBytes = await _certificateService.GetCertificatePDFAsync(certificateId);
@@ -71,6 +111,16 @@ public class CertificateController : ControllerBase
         {
             return BadRequest(new { message = ex.Message });
         }
+    }
+
+    private int? GetUserId()
+    {
+        var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (int.TryParse(userIdClaim, out var userId))
+        {
+            return userId;
+        }
+        return null;
     }
 
     [HttpPost("revoke")]

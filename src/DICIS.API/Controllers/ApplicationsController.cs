@@ -17,15 +17,21 @@ public class ApplicationsController : ControllerBase
     private readonly DicisDbContext _context;
     private readonly IVerificationService _verificationService;
     private readonly ICertificateService _certificateService;
+    private readonly IProfileService _profileService;
+    private readonly IServiceRequestService _serviceRequestService;
 
     public ApplicationsController(
         DicisDbContext context,
         IVerificationService verificationService,
-        ICertificateService certificateService)
+        ICertificateService certificateService,
+        IProfileService profileService,
+        IServiceRequestService serviceRequestService)
     {
         _context = context;
         _verificationService = verificationService;
         _certificateService = certificateService;
+        _profileService = profileService;
+        _serviceRequestService = serviceRequestService;
     }
 
     [HttpPost]
@@ -51,6 +57,20 @@ public class ApplicationsController : ControllerBase
             return BadRequest(new { message = "User not found. Please login as a citizen to create an application." });
         }
 
+        // Check if profile is complete and email is verified
+        var isProfileComplete = await _profileService.IsProfileCompleteAsync(userId.Value);
+        var isEmailVerified = await _profileService.IsEmailVerifiedAsync(userId.Value);
+
+        if (!isProfileComplete)
+        {
+            return BadRequest(new { message = "Please complete your profile first" });
+        }
+
+        if (!isEmailVerified)
+        {
+            return BadRequest(new { message = "Please verify your email address first" });
+        }
+
         // Check for duplicate
         var existing = await _context.Applications
             .FirstOrDefaultAsync(a => a.UserId == userId && a.State == request.State && 
@@ -61,9 +81,24 @@ public class ApplicationsController : ControllerBase
             return BadRequest(new { message = "Application already exists for this state" });
         }
 
+        // Create service request first (for payment tracking)
+        var serviceRequest = new ServiceRequest
+        {
+            UserId = userId.Value,
+            ServiceType = ServiceType.IndigeneCertificate,
+            Status = ServiceRequestStatus.Pending,
+            Amount = await _serviceRequestService.GetServicePriceAsync(ServiceType.IndigeneCertificate),
+            PaymentStatus = PaymentStatus.Pending,
+            CreatedAt = DateTime.UtcNow
+        };
+
+        _context.ServiceRequests.Add(serviceRequest);
+        await _context.SaveChangesAsync();
+
         var application = new Application
         {
             UserId = userId.Value,
+            ServiceRequestId = serviceRequest.Id,
             State = request.State,
             LGA = request.LGA,
             FatherNIN = request.FatherNIN,
@@ -201,6 +236,16 @@ public class ApplicationsController : ControllerBase
             return BadRequest(new { message = "Declaration must be accepted" });
         }
 
+        // Check if payment has been made for this application
+        var serviceRequest = application.ServiceRequestId.HasValue 
+            ? await _context.ServiceRequests.FindAsync(application.ServiceRequestId.Value)
+            : null;
+
+        if (serviceRequest == null || serviceRequest.PaymentStatus != PaymentStatus.Completed)
+        {
+            return BadRequest(new { message = "Payment is required before submitting application. Please complete payment first.", serviceRequestId = serviceRequest?.Id });
+        }
+
         application.Status = ApplicationStatus.PendingVerification;
         application.SubmittedAt = DateTime.UtcNow;
 
@@ -213,6 +258,12 @@ public class ApplicationsController : ControllerBase
         if (verificationResult.IsVerified && !verificationResult.RequiresManualReview)
         {
             await _certificateService.GenerateCertificateAsync(id);
+            
+            // Complete the service request
+            if (serviceRequest != null)
+            {
+                await _serviceRequestService.CompleteServiceRequestAsync(serviceRequest.Id);
+            }
         }
 
         return Ok(MapToDTO(application));

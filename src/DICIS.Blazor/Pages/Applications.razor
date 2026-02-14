@@ -1,5 +1,6 @@
 @page "/applications"
 @inject ApplicationService ApplicationService
+@inject ServiceRequestService ServiceRequestService
 @inject AuthService AuthService
 @inject NavigationManager Navigation
 
@@ -90,14 +91,21 @@
                                     @app.SubmittedAt?.ToString("dd MMM yyyy")
                                 </td>
                                 <td style="padding: 16px;">
-                                    <div style="display: flex; gap: 8px;">
+                                    <div style="display: flex; gap: 8px; flex-wrap: wrap;">
                                         <a href="/applications/@app.Id" class="btn btn-sm btn-outline" style="min-height: 32px;">
                                             <i class="bi bi-eye" style="margin-right: 4px;"></i>
                                             View
                                         </a>
-                                        @if (app.Certificate != null)
+                                        @if (app.Status == Core.Entities.ApplicationStatus.Draft && app.ServiceRequestId.HasValue)
                                         {
-                                            <a href="/certificate/@app.Certificate.CertificateId" class="btn btn-sm btn-primary" style="min-height: 32px;">
+                                            <a href="/services/payment/@app.ServiceRequestId" class="btn btn-sm btn-primary" style="min-height: 32px;">
+                                                <i class="bi bi-credit-card" style="margin-right: 4px;"></i>
+                                                Pay Now
+                                            </a>
+                                        }
+                                        @if (app.Certificate != null && app.Status == Core.Entities.ApplicationStatus.Approved)
+                                        {
+                                            <a href="/certificate/@app.Certificate.CertificateId/download" class="btn btn-sm btn-primary" style="min-height: 32px;">
                                                 <i class="bi bi-download" style="margin-right: 4px;"></i>
                                                 Download
                                             </a>
