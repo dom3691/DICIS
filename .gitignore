@@ -64,3 +64,4 @@ src/DICIS.API/Certificates/
 # Environment variables
 .env
 .env.local
+/src/DICIS.API/Migrations
